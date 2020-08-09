@@ -7,6 +7,7 @@ For gaming use, No commercial purpose
         - Return
             - success or not
             - pid
+            - e.g success,58211
 
     - POST /host/api/status :[pid]
         - request with pid number

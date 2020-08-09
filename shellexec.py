@@ -16,12 +16,10 @@ import socket
 # shell_code = b"\xeb\x13\xb8\x01\x00\x00\x00\xbf\x01\x00\x00\x00\x5e\xba\x0f\x00\x00\x00\x0f\x05\xc3\xe8\xe8\xff\xff\xff\x48\x65\x6c\x6c\x6f\x2c\x20\x57\x6f\x72\x6c\x64\x21\x0a"
 
 def child_task(payload, port):
-    global new_pid
-    new_pid = -1
+    new_process = -1
     new_process = os.fork()
     if new_process == 0:
-        new_pid = os.getpid()
-        print 'Hi, My pid is ', new_pid
+        print 'Hi, My pid is ', os.getpid()
         print 'encoded string : ' + payload
         decodeShell = base64.b64decode(payload)
     ### Sample 
@@ -49,10 +47,9 @@ def child_task(payload, port):
     ### Sample 
     time.sleep(1)
     print 'child process done!'
-    print 'pid : %d' % (new_pid)
-    ## FIXME: return always -1
-    if new_pid == -1:
+    print 'pid : %d' % (new_process)
+    if new_process == -1:
         return 'false'
     else:
-        return 'success'+','+str(new_pid)
+        return 'success'+','+str(new_process)
     # os._exit(0)
