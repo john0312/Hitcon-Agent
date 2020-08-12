@@ -29,8 +29,12 @@ while True:
             #
             process = psutil.Process(int(run_pid))
             status = process.status()
+            if (status != psutil.STATUS_ZOMBIE and status != psutil.STATUS_DEAD and status != psutil.STATUS_STOPPED and status != psutil.STATUS_TRACING_STOP) or status == psutil.STATUS_RUNNING:
+                connection.sendall(status)
+            else:
+                response = 'Process DEAD'
+                connection.sendall(response)
             #all_process = os.popen('ps aux | grep "python"').read()
-            connection.sendall(status)
 
         elif data.startswith('POST /api/sendexploit :'):
             print >>sys.stderr, 'Client exploit sending'

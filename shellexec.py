@@ -7,6 +7,7 @@ import os
 import mmap
 import base64
 import time
+import psutil
 
 ### FIXME: test function
 import socket
@@ -15,11 +16,23 @@ import socket
 # hello_code = "\x65\x78\x61\x6d\x70\x6c\x65\x5f\x73\x68\x65\x6c\x6c\x63\x6f\x64\x65\x5f\x66\x69\x6c\x65\x0a"
 # shell_code = b"\xeb\x13\xb8\x01\x00\x00\x00\xbf\x01\x00\x00\x00\x5e\xba\x0f\x00\x00\x00\x0f\x05\xc3\xe8\xe8\xff\xff\xff\x48\x65\x6c\x6c\x6f\x2c\x20\x57\x6f\x72\x6c\x64\x21\x0a"
 
+'''
+def memory_limit():
+    with open('/proc/meminfo', 'r') as mem:
+'''     
+
 def child_task(payload, port):
     new_process = -1
     new_process = os.fork()
     if new_process == 0:
-        print 'Hi, My pid is ', os.getpid()
+        pid = os.getpid()
+        p = psutil.Process(pid)
+        p.rlimit(psutil.RLIMIT_NOFILE, (128, 128))
+        p.rlimit(psutil.RLIMIT_FSIZE, (1024, 1024))
+        p.rlimit(psutil.RLIMIT_CPU, (1, 1))
+        # cpu_percent
+
+        print 'Hi, My pid is ', pid
         print 'encoded string : ' + payload
         decodeShell = base64.b64decode(payload)
     ### Sample 
