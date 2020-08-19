@@ -40,7 +40,7 @@ while True:
                     response = 'Process Dead'
                     connection.sendall(response)
                 #all_process = os.popen('ps aux | grep "python"').read()
-            except NoSuchProcess:
+            except psutil.NoSuchProcess:
                 response = 'No such process'
                 connection.sendall(response)
 
