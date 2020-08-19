@@ -35,27 +35,25 @@ while True:
         host_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         host = '127.0.0.1'
         port = 54321
-        rand_port = random.randint(1025, 65535)
-        # connection.send(str(rand_port))
-        
-        print 'Random Port on %d', rand_port
-        if data.startswith('POST /host/api/shellcode :'):
-            isPidAppend = data.split(',')
-            if len(isPidAppend) < 2:
-                prefix = 'POST /api/sendexploit :'
-                shell_code = data.split('POST /host/api/shellcode :')[1]
-                host_sock.connect((host,port))
-                data = prefix + shell_code + ',' + str(rand_port)
-                host_sock.send(data)
-                response = host_sock.recv(4096)
-                # print response
-                ### FIXME: return port number?
-                connection.sendall(response)
-                host_sock.close()
-            else:
-                #-----------------------------------------------------
-                kill_pid = isPidAppend[1]
 
+        if data.startswith('POST /host/api/shellcode :'):
+            rand_port = random.randint(1025, 65535)
+            # connection.send(str(rand_port))
+            print 'Random Port on %d', rand_port
+            shell_code = data.split('POST /host/api/shellcode :')[1]
+            isPidAppend = shell_code.split(',')
+            prefix = 'POST /api/sendexploit :'
+            if len(isPidAppend) < 2:
+                data = prefix + str(isPidAppend[0]) + ',' + str(rand_port)
+            else:
+                data = prefix + str(isPidAppend[0]) + ',' + str(rand_port) + ',' + str(isPidAppend[1])
+            host_sock.connect((host,port))
+            host_sock.send(data)
+            response = host_sock.recv(4096)
+            # print response
+            ### FIXME: return port number?
+            connection.sendall(response)
+            host_sock.close()
 
         elif data.startswith('POST /host/api/status :'):
             request_port = data.split('POST /host/api/status :')[1]

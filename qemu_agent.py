@@ -45,16 +45,22 @@ while True:
                 connection.sendall(response)
 
         elif data.startswith('POST /api/sendexploit :'):
+            # data = prefix + shell_code + ',' + str(rand_port) + ',' + str(kill_pid)
             print >>sys.stderr, 'Client exploit sending'
             response = ''
             ## FIXME: subprocess / multiprocessing
             sub_pid = os.fork()
             if sub_pid == 0:
                 payload = data.split('POST /api/sendexploit :')[1]
+                autoPane = payload.split(',')
+                if len(autoPane) > 2:
+                    killproc = payload.split(',')[2]
+                    kill_cmd = 'kill ' + str(killproc)
+                    os.system(kill_cmd)
                 b64code = payload.split(',')[0]
                 userPort = payload.split(',')[1]
-                response = child_task(payload, userPort)
-            print >>sys.stderr, 'sending data back to the client'
+                response = child_task(b64code, userPort)
+            # print >>sys.stderr, 'sending data back to the client'
             # pid, status = os.waitpid(sub_pid, 0)
             connection.sendall(response)
         elif data.startswith('POST /api/getAliveUser :'):
