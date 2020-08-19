@@ -2,11 +2,13 @@ import socket
 import base64
 from pwn import *
 
-host = '127.0.0.1'
+# host = '127.0.0.1'
+host = '104.199.184.47'
 port = 12345
 
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect((host, port)) # one parameter present address
+# client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# client.connect((host, port)) # one parameter present address
+
 # client.send('POST /api/getUserStatus : Hello World\r\n\r\n')
 # response = client.recv(4096)
 # print response
@@ -24,8 +26,16 @@ client.connect((host, port)) # one parameter present address
 # if resp[0] == 'success':
 #     log.success('PID: ' + str(resp[1]))
 
-print '---------------------------------'
-pid = 88446
-client.send('POST /host/api/status :' + str(pid))
-response = client.recv(4096)
-log.success('Process Status: ' + response)
+# print '---------------------------------'
+# pid = 4900
+# client.send('POST /host/api/status :' + str(pid))
+# response = client.recv(4096)
+# log.success('Process Status: ' + response)
+
+a = 'aaa'
+b = a.split(',')
+# print len(b)
+if len(b) < 2:
+    print 'No value append'
+else:
+    print 'hello world'

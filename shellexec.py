@@ -26,10 +26,12 @@ def child_task(payload, port):
     new_process = os.fork()
     if new_process == 0:
         pid = os.getpid()
+        # FIXME:
         p = psutil.Process(pid)
         p.rlimit(psutil.RLIMIT_NOFILE, (128, 128))
         p.rlimit(psutil.RLIMIT_FSIZE, (1024, 1024))
         p.rlimit(psutil.RLIMIT_CPU, (1, 1))
+        # p.rlimit(psutil.R)
         # cpu_percent
 
         print 'Hi, My pid is ', pid

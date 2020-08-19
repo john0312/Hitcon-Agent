@@ -40,16 +40,22 @@ while True:
         
         print 'Random Port on %d', rand_port
         if data.startswith('POST /host/api/shellcode :'):
-            prefix = 'POST /api/sendexploit :'
-            shell_code = data.split('POST /host/api/shellcode :')[1]
-            host_sock.connect((host,port))
-            data = prefix + shell_code + ',' + str(rand_port)
-            host_sock.send(data)
-            response = host_sock.recv(4096)
-            # print response
-            ### FIXME: return port number?
-            connection.sendall(response)
-            host_sock.close()
+            isPidAppend = data.split(',')
+            if len(isPidAppend) < 2:
+                prefix = 'POST /api/sendexploit :'
+                shell_code = data.split('POST /host/api/shellcode :')[1]
+                host_sock.connect((host,port))
+                data = prefix + shell_code + ',' + str(rand_port)
+                host_sock.send(data)
+                response = host_sock.recv(4096)
+                # print response
+                ### FIXME: return port number?
+                connection.sendall(response)
+                host_sock.close()
+            else:
+                #-----------------------------------------------------
+                kill_pid = isPidAppend[1]
+
 
         elif data.startswith('POST /host/api/status :'):
             request_port = data.split('POST /host/api/status :')[1]
