@@ -14,7 +14,9 @@ For gaming use, No commercial purpose
         - request with pid number
         - Return
             - process status
-            - e.g running/sleeping/ or 'Process Dead'
+                - e.g running/sleeping/ or 'Process Dead'
+            - cpu / memroy usage
+                - e.g ,0.1,969796
 
 
 
