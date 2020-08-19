@@ -13,7 +13,9 @@ import random
 ###
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server_addr = ('localhost', 12345)
+hostName = socket.gethostname()
+server_addr = (hostName, 12345)
+# if binding at 'localhost', then cannot connect in from external side
 print >>sys.stderr, 'start server on %s port %s' % server_addr
 sock.bind(server_addr)
 
@@ -30,7 +32,6 @@ while True:
         print >>sys.stderr, 'received "%s"' % data
 
         # spawn a new socket
-        #FIXME: location is not effectively
         host_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         host = '127.0.0.1'
         port = 54321
@@ -46,6 +47,7 @@ while True:
             host_sock.send(data)
             response = host_sock.recv(4096)
             # print response
+            ### FIXME: return port number?
             connection.sendall(response)
             host_sock.close()
 
@@ -60,9 +62,5 @@ while True:
             host_sock.close()
         #     print >>sys.stderr, 'sending data back to the client'
         #     connection.sendall(data)
-
-        else:
-            print >>sys.stderr, 'No data from ', client_addr
-            break
     finally:
         connection.close()
