@@ -19,17 +19,25 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-all: guest_agent_pb2.py kofserver
+# This hosts the ScoreBoard class which records the player's score and other stats.
 
-guest_agent_pb2.py: guest_agent.proto
-	python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. guest_agent.proto
+class ScoreBoard:
+    def __init__(self):
+        # TODO
+        pass
 
-kofserver: FORCE
-	$(MAKE) -C $@
+    # This is called every time the Game logic checks if a player is alive.
+    # If the player is alive, then this method is used to record the score for
+    # being alive.
+    # portUptime and pidUptime is usually the check interval.
+    def LogTick(gameName, playerName, portUptime, portScorePerSec, pidUptime, pidScorePerSec):
+        # TODO
+        pass
 
-clean:
-	rm -f guest_agent_pb2.py guest_agent_pb2_grpc.py
-	make -C kofserver clean
+    # TODO
+    # def LogPlayerAction(...):
 
-# Force target so we can force subdirectory make.
-FORCE:
+    # Query the current score, returns an array of dict.
+    def QueryScore(gameName, playerName):
+        # TODO
+        return []

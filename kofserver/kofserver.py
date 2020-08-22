@@ -1,0 +1,55 @@
+# Copyright (c) 2020 HITCON Agent Contributors
+# See CONTRIBUTORS file for the list of HITCON Agent Contributors
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+# This file host the primary logic for KOF Server, and handles all the
+# KOF Server request.
+
+import logging
+
+from kofserver_pb2 import ErrorCode as KOFErrorCode
+import kofserver_pb2, kofserver_pb2_grpc
+import game
+
+class KOFServer(kofserver_pb2_grpc.KOFServerServicer):
+
+    def __init__(self, executor, vmManager):
+        # games is a dictionary that maps the gameName to Game object.
+        self.games = {}
+        # executor is a concurrent.futures.Executor class that allows us to
+        # run stuff.
+        self.executor = executor
+        # vmManager is the VMManager instance for managing Virtual Machines.
+        self.vmManager = vmManager
+
+    def CreateGame(self, request, context):
+        try:
+            self.games[request.gameName] = game.Game(self.executor, self.vmManager, request.gameName, request.scenarioName)
+        except Exception:
+            logging.exception("Failed to create game")
+            return kofserver_pb2.Rep(error=KOFErrorCode.ERROR_CREATE_GAME)
+        return kofserver_pb2.Rep(error=KOFErrorCode.ERROR_NONE)
+
+    def StartGame(self, request, context):
+        if request.gameName not in self.games:
+            return kofserver_pub2.Rep(error=KOFErrorCode.ERROR_GAME_NOT_FOUND)
+        self.games[request.gameName].Start()
+        return kofserver_pb2.Rep(error=KOFErrorCode.ERROR_NONE)
+

@@ -19,17 +19,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-all: guest_agent_pb2.py kofserver
+all: kofserver_pb2.py guest_agent_pb2.py
 
-guest_agent_pb2.py: guest_agent.proto
-	python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. guest_agent.proto
+kofserver_pb2.py: kofserver.proto
+	python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. kofserver.proto
 
-kofserver: FORCE
-	$(MAKE) -C $@
+guest_agent_pb2.py: ../guest_agent.proto
+	python -m grpc_tools.protoc -I.. --python_out=. --grpc_python_out=. guest_agent.proto
 
 clean:
+	rm -f kofserver_pb2.py kofserver_pb2_grpc.py
 	rm -f guest_agent_pb2.py guest_agent_pb2_grpc.py
-	make -C kofserver clean
-
-# Force target so we can force subdirectory make.
-FORCE:
