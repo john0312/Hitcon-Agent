@@ -1,5 +1,4 @@
 # Hitcon-Agent
-For gaming use, No commercial purpose
 
 - Host Agent
     - POST /host/api/shellcode :[shellcode],[pid]\(optional\)
