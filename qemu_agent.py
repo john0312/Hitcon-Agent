@@ -80,7 +80,11 @@ while True:
                     os.system(kill_cmd)
                 b64code = payload.split(',')[0]
                 userPort = payload.split(',')[1]
-                response = child_task(b64code, userPort)
+                result, pid = child_task(b64code, userPort)
+                if result:
+                    response = 'success,'+str(pid)
+                else:
+                    response = 'false'
             # print >>sys.stderr, 'sending data back to the client'
             # pid, status = os.waitpid(sub_pid, 0)
             connection.sendall(response)

