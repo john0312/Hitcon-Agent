@@ -1,0 +1,12 @@
+# scenarioDir: "/kof/scenario"
+scenarioDir: "./scenario"
+
+agentConnectTimeout: 3.0
+
+# portStart and portEnd specifies the port that we'll use for players to
+# bind to.
+portStart: 30000
+portEnd: 39999
+
+# The guest agent port
+agentPort: 29120

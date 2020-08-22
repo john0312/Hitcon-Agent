@@ -19,17 +19,35 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-all: guest_agent_pb2.py kofserver
+import yaml
 
-guest_agent_pb2.py: guest_agent.proto
-	python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. guest_agent.proto
+# For the real configuration file, see kofserver.yml
 
-kofserver: FORCE
-	$(MAKE) -C $@
+# Config is a singleton class that stores the KOFServer configurations.
+# It is in charge of loading config from kofserver.yml and
+# allowing other code to access the config.
+# Simply do Config.conf() to get configurations.
+class Config:
+  __instance = None
 
-clean:
-	rm -f guest_agent_pb2.py guest_agent_pb2_grpc.py
-	make -C kofserver clean
+  @staticmethod
+  def Init():
+      # Create the config class and load the configs.
+      # Should only be called once at startup.
+      Config()
 
-# Force target so we can force subdirectory make.
-FORCE:
+  @staticmethod
+  def conf():
+      if Config.__instance == None:
+          raise Exception("Config not initialized")
+      return Config.__instance.conf
+
+  def __init__(self):
+      if Config.__instance != None:
+          raise Exception("Multiple Config instanciation")
+      else:
+          Config.__instance = self
+      
+      # Now load the config.
+      with open('./kofserver.yml') as f:
+          self.conf = yaml.load(f, Loader=yaml.FullLoader)
