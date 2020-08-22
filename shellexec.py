@@ -1,6 +1,7 @@
 # from ctypes import *
 import ctypes
 # from PyShellcode import ExecutableCode
+from cgroupLimit import *
 
 import sys
 import os
@@ -27,10 +28,14 @@ def child_task(payload, port):
     if new_process == 0:
         pid = os.getpid()
         # FIXME:
-        p = psutil.Process(pid)
-        p.rlimit(psutil.RLIMIT_NOFILE, (128, 128))
-        p.rlimit(psutil.RLIMIT_FSIZE, (1024, 1024))
-        p.rlimit(psutil.RLIMIT_CPU, (1, 1))
+        # p = psutil.Process(pid)
+        # p.rlimit(psutil.RLIMIT_NOFILE, (128, 128))
+        # p.rlimit(psutil.RLIMIT_FSIZE, (1024, 1024))
+        # p.rlimit(psutil.RLIMIT_CPU, (1, 1))
+        # p.
+        set_limit('CPU', 1)
+        set_limit('VMEM', 1024)
+        create_rlimits()
         # p.rlimit(psutil.R)
         # cpu_percent
 

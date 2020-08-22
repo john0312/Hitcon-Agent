@@ -24,6 +24,8 @@ For gaming use, No commercial purpose
 1. user binding ? -> socket.gethostname()
 2. Does port need to be returned?
 3. setrlimit testing
+4. logging system
+5. add john into GCP server
 
 ### Bug Fixed
 - If user input is not valid , will crash the program
