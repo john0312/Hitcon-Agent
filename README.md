@@ -21,10 +21,8 @@
 
 ### TODO
 1. user binding ? -> socket.gethostname()
-2. Does port need to be returned?
-3. setrlimit testing
-4. logging system (V)
-5. add john into GCP server
+2. setrlimit testing
+3. logging system (V)
 
 ### Bug Fixed
 - If user input is not valid , will crash the program
