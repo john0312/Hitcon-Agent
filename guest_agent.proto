@@ -1,0 +1,91 @@
+// Copyright (c) 2020 HITCON Agent Contributors
+// See CONTRIBUTORS file for the list of HITCON Agent Contributors
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+syntax = "proto3";
+
+package guestagent;
+
+// ================== API Messages ==================
+
+// NOTE: Req = Request, Rep = Reply/Response
+
+// ErrorCode used by Rep
+enum ErrorCode {
+  // No error, great.
+  ERROR_NONE = 0;
+  // The author is busy/too lazy.
+  ERROR_NOT_IMPLEMENTED = 1;
+  // Failed to run command, check log for stack trace.
+  ERROR_RUN_CMD_FAILED = 2;
+}
+
+// Rep (Reply) is a generic response for RPC calls that uses it.
+message Rep {  
+  ErrorCode error = 1;
+}
+
+message PingReq {
+  // Nothing's needed for a ping.
+}
+
+message RunSCReq {
+  // Shellcode in base64
+  string shellcode = 1;
+
+  int32 userPort = 2;
+  int32 killProc = 3;
+}
+
+message RunSCRep {
+  // General reply to indicate status.
+  Rep reply = 1;
+
+  // PID of the process running the shellcode.
+  int32 pid = 2;
+}
+
+message RunCmdReq {
+  // The exact shell command to run.
+  string cmd = 1;
+}
+
+message RunCmdRep {
+  // General reply to indicate status.
+  Rep reply = 1;
+
+  // PID of the newly launched process.
+  int32 pid = 2;
+}
+
+service GuestAgent {
+  // Ping is used to check if the agent is doing well.
+  rpc Ping(PingReq) returns (Rep) {}
+
+  // RunSC runs shellcode, d'uh.
+  rpc RunSC(RunSCReq) returns (RunSCRep) {}
+  
+  // RunCmd runs command asynchronously, the command is ran on the shell
+  // and its PID is returned.
+  rpc RunCmd(RunCmdReq) returns (RunCmdRep) {}
+
+  // RunCmdSync runs command synchronously, and produces the stdout/stderr.
+  // TODO: rpc RunCmdSync(RunCmdSyncReq) returns (RunCmdSyncRep) {}
+}
