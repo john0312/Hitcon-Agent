@@ -26,18 +26,77 @@ class ScoreBoard:
         # TODO
         pass
 
-    # This is called every time the Game logic checks if a player is alive.
-    # If the player is alive, then this method is used to record the score for
-    # being alive.
+    # This is called every time the Game logic checks if the players are alive.
+    # This method is used to record players who are alive.
+    # gameName: A string that is the name of the game that we are recording.
+    # playerName: An array of player's name.
+    # portUptime: An array of uptime for the player's port.
+    # portScorePerSec: An array of scores per second of uptime for the player.
+    # pidUptime: An arrya of uptime for the player's process.
+    # pidScorePerSec: An array of scores per second of uptime for the player.
+    # Array sizes for playerName, portUptime, portScorePerSec, pidUptime and
+    # pidScorePerSec are guaranteed to be the same.
     # portUptime and pidUptime is usually the check interval.
-    def LogTick(gameName, playerName, portUptime, portScorePerSec, pidUptime, pidScorePerSec):
+    # 
+    # For example:
+    # - In the past 30 seconds:
+    #     - Player Alice's process is online, but the port is unreachable.
+    #     - Player Bob's process is online, and the port is reachable.
+    #     - Player Eve's process and port are both offline.
+    # - In this round:
+    #     - Process being up is worth 5 points per seconds.
+    #     - Port reachable is worth 10 points per seconds.
+    # Then, the call to LogTicks will look like this:
+    # LogTicks(
+    #     "Game1",                   # gameName
+    #     [ "Alice", "Bob", "Eve" ], # playerName
+    #     [ 0, 30, 0 ],              # portUptime
+    #     [ 10, 10, 10 ],            # portScorePerSec
+    #     [ 30, 30, 0 ],             # pidUptime
+    #     [ 5, 5, 5 ]                # pidScorePerSec
+    # )
+    # In this case, Alice should get 30*5 points, Bob should get 30*5+30*10
+    # points, and Eve doesn't get any point.
+    def LogTicks(gameName, playerName, portUptime, portScorePerSec, pidUptime, pidScorePerSec):
         # TODO
         pass
 
-    # TODO
-    # def LogPlayerAction(...):
+    # Logs the player's action, such as "Shellcode", "Command", and "OpenURL".
+    # gameName: a string that is the name of the game that we are recording.
+    # playerName: Name of the player doing the action.
+    # actionType: A string that represents the action type.
+    #             Currently, "Shellcode", "Command" and "OpenURL" is possible.
+    #             Others could be added in the future.
+    # actionContent: A string that represents the content of the action. For
+    #                shellcode, this would be the base64 of the shellcode.
+    #                For command, this is the full command, and for open URL,
+    #                This is the full URL.
+    #                Note that this field could be rather large, and it doesn't
+    #                need to be searched. (ie. no index, could use blob type or
+    #                even off database storage)
+    # Example:
+    # LogPlayerAction("game1", "malice", "command", "rm -rf /")
+    def LogPlayerAction(gameName, playerName, actionType, actionContent):
+        # TODO
+        pass
 
-    # Query the current score, returns an array of dict.
+    # Query the current score, returns an array of dict of score and other
+    # statistics. The returned dict should contain:
+    # - "playerName"
+    # - "portUptime"
+    # - "portScore"
+    # - "pidUptime"
+    # - "pidScore"
+    # - "totalScore"
+    # If gameName is "", then scores for all games are queried and the results
+    # are summed for each player.
+    # If playerName is "", then all players with non-zero scores are returned.
+    # If there's a problem with the database, an exception is raised.
+    # Example:
+    # If the example above on LogTicks is called twice, then:
+    # QueryScore("game1", "Alice") should results in:
+    # [ { "playerName": "Alice", "portUptime": 0, "portScore": 0,
+    #     "pidUptime": 60, "pidScore": 300, "totalScore": 300 } ]
     def QueryScore(gameName, playerName):
         # TODO
         return []

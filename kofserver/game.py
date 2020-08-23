@@ -24,41 +24,71 @@
 import logging
 import yaml
 import os
+import traceback
+import time
 
 import kofserver_pb2, kofserver_pb2_grpc
 from kofserver_pb2 import GameState
+from kofserver_pb2 import ErrorCode as KOFErrorCode
 from vm_manager import VMManager, VM
 from config import Config
 from guest_agent import GuestAgent
 
 class Game:
     def __init__(self, executor, vmManager, gameName, scenarioName):
+        self.gameName = gameName
+        
         # executor is a concurrent.futures.Executor class that allows us to
         # run stuff.
         self.executor = executor
-
+        
         # Load the scenario
         self.scenarioName = scenarioName
         self.scenario = Game.LoadScenario(scenarioName)
 
+        # The state that the game is in, needs to happen before starting gameTask.
+        self.state = GameState.GAME_CREATED
+
         # Start the Game Task, which runs anything in the game that need to
         # be done repeatedly, such as scoring the user.
         self.gameTaskExit = False
-        self.gameTask = executor.submit(self.GameFunc, self)
+        self.gameTask = executor.submit(Game._GameFunc, self)
 
         # Create the guest agent proxy.
         self.agent = GuestAgent(self.executor, self.GetIP())
 
-        # The state that the game is in.
-        self.state = GameState.GAME_CREATED
+        # Init the player variables.
+        self.users = {}
+        self.portToUser = {}
 
         # Create the VM that we'll be using for this game.
         self.vmManager = vmManager
         self.vm = vmManager.CreateVM(self.scenario['vmPath'])
     
-    def GameFunc(self):
-        # This method runs for the entire time life cycle of the game.
+    # Start the game.
+    def Start(self):
+        # Set it to we are starting.
+        self.state = GameState.GAME_STARTING1
+        # GameFunc will handle the rest.
+        # ie. Initialize the VM, waiting for guest agent... etc
+        return KOFErrorCode.ERROR_NONE
+
+    # Return the Game protobuf for this game.
+    def GetGameProto(self):
+        result = kofserver_pb2.Game(name=self.gameName, state=self.state)
+        return result
+    
+    def _GameFunc(self):
+        # We need to catch the exception because it doesn't showup until
+        # very late, when .result() is called.
+        try:
+            self._GameFuncReal()
+        except Exception:
+            logging.exception("Exception in GameFunc")
+
+    def _GameFuncReal(self):
         logging.info("GameFunc for %s running"%(self.gameName,))
+        # This method runs for the entire time life cycle of the game.
         while True:
             if self.gameTaskExit:
                 # Time to go
@@ -69,10 +99,36 @@ class Game:
                 time.sleep(0.5)
                 continue
             
-            if self.state == GameState.GAME_STARTING:
+            if self.state == GameState.GAME_STARTING1:
+                if self.vm.GetState() == VM.VMState.CREATED:
+                    # Init and start the VM
+                    res = self.vm.Init()
+                    if not res or self.vm.GetState() != VM.VMState.READY:
+                        logging.error("Failed to init VM (%s) or invalid VM state after Init() (%s)"%(str(res), str(self.vm.GetState())))
+                        self.state = GameState.GAME_ERROR
+                        continue
+
+                    res = self.vm.Boot()
+                    if not res:
+                        logging.error("Failed to boot VM")
+                        self.state = GameState.GAME_ERROR
+                        continue
+                    
+                    continue
+                else:
+                    # We've finished init and start VM step, so wait for it
+                    # to be running.
+                    if self.vm.GetState() == VM.VMState.RUNNING:
+                        logging.info("VM for Game %s is running."%(self.gameName,))
+                        self.state = GameState.GAME_STARTING2
+                    # Wait some time?
+                    time.sleep(0.5)
+                
+            if self.state == GameState.GAME_STARTING2:
                 # Wait for the guest agent to be connected.
                 if self.agent.EnsureConnection():
                     # It's connected, so we can move onto the started state
+                    logging.info("Agent for Game %s is ready."%(self.gameName,))
                     self.state = GameState.GAME_RUNNING
                     continue
                 # If agent is responsive, then we don't have to check the VM.
@@ -93,7 +149,7 @@ class Game:
                 if self.vm.GetState() == VM.VMState.DESTROYED:
                     # It's down, so let's 
                     # TODO
-                    pass0
+                    pass
                     
     
     def StopGameFunc(self):
@@ -105,9 +161,9 @@ class Game:
     def GetIP(self):
         return self.scenario['ip']
 
-    def RegisterUser(self, username):
+    def RegisterPlayer(self, username):
         if username in self.users:
-            return kofserver_pb2.ERROR_USER_ALREADY_EXISTS
+            return KOFErrorCode.ERROR_USER_ALREADY_EXISTS
         
         self.users[username] = {}
         
@@ -123,11 +179,38 @@ class Game:
         if port == -1:
             # This shouldn't happen, so it's an Exception not a return code.
             raise Exception("No valid port available")
-        self.Users[username]["port"] = port
-        self.Users[username]["pid"] = -1 # Not available yet.
+        self.users[username]["port"] = port
+        self.users[username]["pid"] = -1 # Not available yet.
+        self.users[username]["pidUp"] = False # User's pid up when we last check?
+        self.users[username]["portUp"] = False # User's port up when we last check?
 
-        return kofserver_pb2.ERROR_NONE
+        return KOFErrorCode.ERROR_NONE
     
+    def QueryPlayerInfo(self, playerName):
+        if playerName != "":
+            return [self.GetPlayerInfoProto(playerName),]
+        # playerName == "", so we retrieve all the players.
+        res = []
+        for p in self.users:
+            res.append(self.GetPlayerInfoProto(p))
+        return res
+
+    def GetPlayerInfoProto(self, playerName):
+        if playerName not in self.users:
+            raise Exception("Invalid player %s for GetPlayerInfoProto"%playerName)
+        
+        result = kofserver_pb2.PlayerInfo(playerName=playerName)
+        result.port = udict["port"]
+        result.pid = udict["pid"]
+        result.portUp = udict["portUp"]
+        result.pidUp = udict["pidUp"]
+        return result
+
+    def Shutdown(self):
+        self.gameTaskExit = True
+        # Wait for it to terminate
+        self.gameTask.result()
+
     @staticmethod
     def LoadScenario(scenarioName):
         scenarioDir = Config.conf()['scenarioDir']
