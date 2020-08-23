@@ -22,7 +22,12 @@
 # This file contains the GuestAgent class, it is in charge of talking to the
 # agent running within the QEMU/KVM guest. i.e. It is the proxy to guest agent.
 
+import grpc
+import logging
+
 import guest_agent_pb2, guest_agent_pb2_grpc
+from config import Config
+
 class GuestAgent:
     def __init__(self, executor, guestIP):
         self.executor = executor
@@ -36,7 +41,7 @@ class GuestAgent:
     def EnsureConnection(self):
         if self.channel is not None:
             # Already connected.
-            log.warn('EnsureConnection() when it is already connected')
+            logging.warn('EnsureConnection() when it is already connected')
             return True
         
         host = self.guestIP
@@ -56,16 +61,16 @@ class GuestAgent:
         # Give it a ping to see if it's working?
         result = self.CheckAlive()
         if result:
-            log.info('Guest agent at %s:%d connected'%(host, port))
+            logging.info('Guest agent at %s:%d connected'%(host, port))
         else:
-            log.info('Bad guest agent at %s:%d'%(host, port))
+            logging.info('Bad guest agent at %s:%d'%(host, port))
         return result
 
     # CheckAlive checks if the guest agent is responsive.
     def CheckAlive(self):
         if self.stub is None or self.channel is None:
             # Not connected.
-            log.warn('CheckAlive() but it is not connected')
+            logging.warn('CheckAlive() but it is not connected')
             return False
         
         reply = self.stub.Ping(guest_agent_pb2.PingReq())

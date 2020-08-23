@@ -40,6 +40,9 @@ class KOFServer(kofserver_pb2_grpc.KOFServerServicer):
         self.vmManager = vmManager
 
     def CreateGame(self, request, context):
+        if request.gameName in self.games:
+            return kofserver_pb2.Rep(error=KOFErrorCode.ERROR_GAME_ALREADY_EXISTS)
+
         try:
             self.games[request.gameName] = game.Game(self.executor, self.vmManager, request.gameName, request.scenarioName)
         except Exception:
@@ -49,7 +52,37 @@ class KOFServer(kofserver_pb2_grpc.KOFServerServicer):
 
     def StartGame(self, request, context):
         if request.gameName not in self.games:
-            return kofserver_pub2.Rep(error=KOFErrorCode.ERROR_GAME_NOT_FOUND)
-        self.games[request.gameName].Start()
-        return kofserver_pb2.Rep(error=KOFErrorCode.ERROR_NONE)
+            return kofserver_pb2.Rep(error=KOFErrorCode.ERROR_GAME_NOT_FOUND)
+        error = self.games[request.gameName].Start()
+        return kofserver_pb2.Rep(error=error)
+
+    def QueryGame(self, request, context):
+        results = []
+        if request.gameName != "":
+            if request.gameName not in self.games:
+                return kofserver_pb2.Rep(error=KOFErrorCode.ERROR_GAME_NOT_FOUND)
+            results.append(self.games[request.gameName].GetGameProto())
+        else:
+            for gn in self.games:
+                results.append(self.games[gn].GetGameProto())
+        genericReply = kofserver_pb2.Rep(error=KOFErrorCode.ERROR_NONE)
+        return kofserver_pb2.QueryGameRep(reply=genericReply, games=results)
+
+    def PlayerRegister(self, request, context):
+        if request.gameName not in self.games:
+            return kofserver_pb2.Rep(error=KOFErrorCode.ERROR_GAME_NOT_FOUND)
+        error = self.games[request.gameName].RegisterPlayer(request.playerName)
+        return kofserver_pb2.Rep(error=error)
+
+    def PlayerInfo(self, request, context):
+        if request.gameName not in self.games:
+            return kofserver_pb2.Rep(error=KOFErrorCode.ERROR_GAME_NOT_FOUND)
+        error = self.games[request.gameName].QueryPlayerInfo(request.playerName)
+        return kofserver_pb2.Rep(error=error)
+
+    def Shutdown(self):
+        logging.info("Shutting down all games.")
+        for g in self.games:
+            self.games[g].Shutdown()
+    
 

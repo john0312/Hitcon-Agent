@@ -24,6 +24,9 @@
 """
 Example usage
 $ python3 kofclient.py --host=127.0.0.1 --port=29110 --action=creategame --game_name=game1 --scenario=MyScenario
+$ python3 kofclient.py --action=startgame --game_name=game1
+$ python3 kofclient.py --action=querygame --game_name=
+$ python3 kofclient.py --action=playerreg --game_name=game1 --player=John
 """
 
 import logging
@@ -44,12 +47,16 @@ def main():
     parser.add_argument('--port', type=int, default=29110, help='The port to connect to')
 
     # Commands 
-    parser.add_argument('--action', type=str, choices=['creategame'], help='Action to carry out.')
+    parser.add_argument('--action', type=str, choices=['creategame', 'startgame', 'querygame', 'playerreg'], help='Action to carry out.')
     parser.add_argument('--game_name', type=str, default='MyGame')
     parser.add_argument('--scenario', type=str, default='MyScenario')
+    parser.add_argument('--player', type=str, default='John')
     
     """
     --action=creategame --game_name=<GameName> --name=<Scenario>
+    --action=startgame --game_name=<GameName>
+    --action=querygame [--game_name=<GameName>]
+    --action=playerreg --game_name=<GameName> --player=<PlayerName>
     """
 
     args = parser.parse_args()
@@ -64,5 +71,29 @@ def main():
             else:
                 print("Create game failed: %s"%(str(reply.error),))
 
+        if args.action == 'startgame':
+            req = kofserver_pb2.StartGameReq(gameName=args.game_name)
+            reply = stub.StartGame(req)
+            if reply.error == KOFErrorCode.ERROR_NONE:
+                print("Start game successful")
+            else:
+                print("Start game failed: %s"%(str(reply.error),))
+
+        if args.action == 'querygame':
+            req = kofserver_pb2.QueryGameReq(gameName=args.game_name)
+            reply = stub.QueryGame(req)
+            if reply.reply.error == KOFErrorCode.ERROR_NONE:
+                print("Result:")
+                print(reply)
+            else:
+                print("Query game failed: %s"%(str(reply.error),))
+        
+        if args.action == 'playerreg':
+            req = kofserver_pb2.PlayerRegister(gameName=args.game_name, playerName=args.player_name)
+            reply = stub.PlayerRegister(req)
+            if reply.error == KOFErrorCode.ERROR_NONE:
+                print("Player register successful")
+            else:
+                print("Player register failed: %s"%(str(reply.error),))
 if __name__ == "__main__":
     main()

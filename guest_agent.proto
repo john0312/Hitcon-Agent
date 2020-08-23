@@ -23,6 +23,15 @@ syntax = "proto3";
 
 package guestagent;
 
+// ProcInfo holds the information regarding a process
+message ProcInfo {
+  int32 pid = 1;
+  string name = 2;
+  string cmdline = 3;
+  double cpu_time = 4; // User+System CPU time in seconds
+  int64 memory_usage = 5; // RSS of the process
+}
+
 // ================== API Messages ==================
 
 // NOTE: Req = Request, Rep = Reply/Response
@@ -75,6 +84,18 @@ message RunCmdRep {
   int32 pid = 2;
 }
 
+message QueryProcInfoReq {
+ // Nothing's needed.
+}
+
+message QueryProcInfoRep {
+  // General reply to indicate status.
+  Rep reply = 1;
+
+  // Information for all processes.
+  repeated ProcInfo info = 2;
+}
+
 service GuestAgent {
   // Ping is used to check if the agent is doing well.
   rpc Ping(PingReq) returns (Rep) {}
@@ -88,4 +109,7 @@ service GuestAgent {
 
   // RunCmdSync runs command synchronously, and produces the stdout/stderr.
   // TODO: rpc RunCmdSync(RunCmdSyncReq) returns (RunCmdSyncRep) {}
+
+  // Query all process information.
+  rpc QueryProcInfo(QueryProcInfoReq) returns (QueryProcInfoRep) {}
 }

@@ -25,6 +25,7 @@
 Example usage
 $ python3 guest_agent_client.py --host=127.0.0.1 --port=29120 --action=ping
 $ python3 guest_agent_client.py --host=127.0.0.1 --port=29120 --action=runcmd '--cmd=echo HelloWorld'
+$ python3 guest_agent_client.py --action=queryprocinfo
 """
 
 import logging
@@ -44,7 +45,7 @@ def main():
     parser.add_argument('--port', type=int, default=29120, help='The port to connect to')
 
     # Commands 
-    parser.add_argument('--action', type=str, choices=['ping', 'runcmd', 'runsc'], help='Action to carry out.')
+    parser.add_argument('--action', type=str, choices=['ping', 'runcmd', 'runsc', 'queryprocinfo'], help='Action to carry out.')
     parser.add_argument('--cmd', type=str, default='echo HelloWorld')
     parser.add_argument('--shellcode', type=str, default='6xO4AQAAAL8BAAAAXroPAAAADwXD6Oj///9IZWxsbywgV29ybGQhCgo=')
     
@@ -52,6 +53,7 @@ def main():
     --action=ping // No other arguments required.
     --action=runcmd --cmd=<CMD>
     --action=runsc --shellcode=<b64shellcode>
+    --action=queryprocinfo
     """
 
     args = parser.parse_args()
@@ -84,5 +86,15 @@ def main():
                 print("Run CMD successful, pid=%d"%(response.pid))
             else:
                 print("Run CMD failed: %s"%(str(response.reply.error),))
+        
+        if args.action == 'queryprocinfo':
+            req = guest_agent_pb2.QueryProcInfoReq()
+            response = stub.QueryProcInfo(req)
+            if response.reply.error == guest_agent_pb2.ErrorCode.ERROR_NONE:
+                print("Query Process Info successful, result:")
+                print(response.info)
+            else:
+                print("Query process info failed: %s"%(str(response.reply.error),))
+
 if __name__ == "__main__":
     main()

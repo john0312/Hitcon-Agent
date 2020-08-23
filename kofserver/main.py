@@ -51,8 +51,12 @@ def main():
     kofserver_pb2_grpc.add_KOFServerServicer_to_server(kofservicer, server)
     server.add_insecure_port('[::]:29110')
     server.start()
-    server.wait_for_termination()
+    try:
+        server.wait_for_termination()
+    except KeyboardInterrupt:
+        logging.warn("Ctrl-C Detected, shutting down.")
 
+    kofservicer.Shutdown()
     executor.shutdown()
 
 if __name__ == '__main__':
