@@ -10,3 +10,7 @@ portEnd: 39999
 
 # The guest agent port
 agentPort: 29120
+
+# sqlite
+scoreboardDBPath: "./scoreboard.db"
+dbRetryTimes: 3
