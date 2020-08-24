@@ -20,11 +20,14 @@
 # SOFTWARE.
 
 # This hosts the ScoreBoard class which records the player's score and other stats.
+import time
 
 class ScoreBoard:
-    def __init__(self):
-        # TODO
-        pass
+    def __init__(self, database):
+        self.database = database
+        # Create scoreboard table
+        self.CreateScoreTable()
+        self.CreateActionTable()
 
     # This is called every time the Game logic checks if the players are alive.
     # This method is used to record players who are alive.
@@ -32,7 +35,7 @@ class ScoreBoard:
     # playerName: An array of player's name.
     # portUptime: An array of uptime for the player's port.
     # portScorePerSec: An array of scores per second of uptime for the player.
-    # pidUptime: An arrya of uptime for the player's process.
+    # pidUptime: An array of uptime for the player's process.
     # pidScorePerSec: An array of scores per second of uptime for the player.
     # Array sizes for playerName, portUptime, portScorePerSec, pidUptime and
     # pidScorePerSec are guaranteed to be the same.
@@ -57,9 +60,21 @@ class ScoreBoard:
     # )
     # In this case, Alice should get 30*5 points, Bob should get 30*5+30*10
     # points, and Eve doesn't get any point.
-    def LogTicks(gameName, playerName, portUptime, portScorePerSec, pidUptime, pidScorePerSec):
-        # TODO
-        pass
+    def LogTicks(self, gameName, playerName, portUptime, portScorePerSec, pidUptime, pidScorePerSec):
+        now = int(time.time())
+        sql = "INSERT INTO score (game_name, player_name, port_uptime, port_score_per_sec, pid_uptime, pid_score_per_sec, create_time) VALUES "
+        for i in range(len(playerName)):
+            sql += "('%s', '%s', %d, %d, %d, %d, %d)" % (gameName, playerName[i], portUptime[i], portScorePerSec[i], pidUptime[i], pidScorePerSec[i], now)
+            sql += ";" if i == len(playerName) - 1 else ","
+            
+        cursor = self.database.Execute(sql)
+        try:
+            self.database.Commit()
+            results = False if cursor.rowcount == -1 else True
+            cursor.close()
+            return results
+        except:  
+            raise
 
     # Logs the player's action, such as "Shellcode", "Command", and "OpenURL".
     # gameName: a string that is the name of the game that we are recording.
@@ -76,9 +91,18 @@ class ScoreBoard:
     #                even off database storage)
     # Example:
     # LogPlayerAction("game1", "malice", "command", "rm -rf /")
-    def LogPlayerAction(gameName, playerName, actionType, actionContent):
-        # TODO
-        pass
+    def LogPlayerAction(self, gameName, playerName, actionType, actionContent):
+        now = int(time.time())
+        sql = "INSERT INTO action (game_name, player_name, type, content, create_time) VALUES ('%s', '%s', '%s', '%s', %d)"
+        sql = sql % (gameName, playerName, actionType, actionContent, now)
+        cursor = self.database.Execute(sql)
+        try:
+            self.database.Commit()
+            results = False if cursor.rowcount == -1 else True
+            cursor.close()
+            return results
+        except:  
+            raise
 
     # Query the current score, returns an array of dict of score and other
     # statistics. The returned dict should contain:
@@ -97,6 +121,71 @@ class ScoreBoard:
     # QueryScore("game1", "Alice") should results in:
     # [ { "playerName": "Alice", "portUptime": 0, "portScore": 0,
     #     "pidUptime": 60, "pidScore": 300, "totalScore": 300 } ]
-    def QueryScore(gameName, playerName):
-        # TODO
-        return []
+    def QueryScore(self, gameName, playerName):
+        sql = "SELECT player_name, SUM(port_uptime), SUM(port_score_per_sec), SUM(pid_uptime), SUM(pid_score_per_sec) FROM score %s GROUP BY game_name, player_name;"
+        whereSQL = ""
+        if gameName != "":
+            whereSQL += "WHERE game_name='%s'" % (gameName)
+        if playerName != "":
+            whereSQL += "WHERE player_name='%s'" % (playerName) if whereSQL == "" else " AND player_name='%s'" % (playerName)
+        
+        sql = sql % (whereSQL)
+        cursor = self.database.Execute(sql)
+        try:
+            records = cursor.fetchall()
+            cursor.close()
+            results = []
+            if len(records) > 0:
+                for r in records:
+                    portScore = r[1] * r[2]
+                    pidScore = r[3] * r[4]
+                    totalScore = portScore + pidScore
+                    # If playerName is "", then all players with non-zero scores are returned.
+                    if playerName == "" and totalScore == 0:
+                        continue
+                    results.append({
+                        "playerName": r[0],
+                        "portUptime": r[1],
+                        "portScore": portScore,
+                        "pidUptime": r[3],
+                        "pidScore": pidScore,
+                        "totalScore": totalScore})
+            return results
+        except:  
+            raise
+
+    def CreateScoreTable(self):
+        sql = """CREATE TABLE IF NOT EXISTS score
+                (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                game_name TEXT NOT NULL,
+                player_name TEXT NOT NULL,
+                port_uptime INTEGER,
+                port_score_per_sec INTEGER,
+                pid_uptime INTEGER,
+                pid_score_per_sec INTEGER,
+                create_time INTEGER NOT NULL);"""
+        cursor = self.database.Execute(sql)
+        try:
+            self.database.Commit()
+            results = False if cursor.rowcount == -1 else True
+            cursor.close()
+            return results
+        except:  
+            raise
+
+    def CreateActionTable(self):
+        sql = """CREATE TABLE IF NOT EXISTS action
+                (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                game_name TEXT NOT NULL,
+                player_name TEXT NOT NULL,
+                type TEXT NOT NULL,
+                content TEXT,
+                create_time INTEGER NOT NULL);"""
+        cursor = self.database.Execute(sql)
+        try:
+            self.database.Commit()
+            results = False if cursor.rowcount == -1 else True
+            cursor.close()
+            return results
+        except:  
+            raise
