@@ -62,12 +62,12 @@ class ScoreBoard:
     # points, and Eve doesn't get any point.
     def LogTicks(self, gameName, playerName, portUptime, portScorePerSec, pidUptime, pidScorePerSec):
         now = int(time.time())
-        sql = "INSERT INTO score (game_name, player_name, port_uptime, port_score_per_sec, pid_uptime, pid_score_per_sec, create_time) VALUES "
+        sql = "INSERT INTO score (game_name, player_name, port_uptime, port_score_per_sec, pid_uptime, pid_score_per_sec, create_time) VALUES (?, ?, ?, ?, ?, ?, ?);"
+        values = []
         for i in range(len(playerName)):
-            sql += "('%s', '%s', %d, %d, %d, %d, %d)" % (gameName, playerName[i], portUptime[i], portScorePerSec[i], pidUptime[i], pidScorePerSec[i], now)
-            sql += ";" if i == len(playerName) - 1 else ","
+            values.append((gameName, playerName[i], portUptime[i], portScorePerSec[i], pidUptime[i], pidScorePerSec[i], now))
             
-        cursor = self.database.Execute(sql)
+        cursor = self.database.ExecuteMany(sql, values)
         try:
             self.database.Commit()
             results = False if cursor.rowcount == -1 else True
@@ -93,9 +93,9 @@ class ScoreBoard:
     # LogPlayerAction("game1", "malice", "command", "rm -rf /")
     def LogPlayerAction(self, gameName, playerName, actionType, actionContent):
         now = int(time.time())
-        sql = "INSERT INTO action (game_name, player_name, type, content, create_time) VALUES ('%s', '%s', '%s', '%s', %d)"
-        sql = sql % (gameName, playerName, actionType, actionContent, now)
-        cursor = self.database.Execute(sql)
+        sql = "INSERT INTO action (game_name, player_name, type, content, create_time) VALUES (?, ?, ?, ?, ?);"
+        values = (gameName, playerName, actionType, actionContent, now)
+        cursor = self.database.Execute(sql, values)
         try:
             self.database.Commit()
             results = False if cursor.rowcount == -1 else True
@@ -123,14 +123,17 @@ class ScoreBoard:
     #     "pidUptime": 60, "pidScore": 300, "totalScore": 300 } ]
     def QueryScore(self, gameName, playerName):
         sql = "SELECT player_name, SUM(port_uptime), SUM(port_score_per_sec), SUM(pid_uptime), SUM(pid_score_per_sec) FROM score %s GROUP BY game_name, player_name;"
+        values = []
         whereSQL = ""
         if gameName != "":
-            whereSQL += "WHERE game_name='%s'" % (gameName)
+            whereSQL += "WHERE game_name=?"
+            values.append(gameName)
         if playerName != "":
-            whereSQL += "WHERE player_name='%s'" % (playerName) if whereSQL == "" else " AND player_name='%s'" % (playerName)
-        
+            whereSQL += "WHERE player_name=?" if whereSQL == "" else " AND player_name=?"
+            values.append(playerName)
+
         sql = sql % (whereSQL)
-        cursor = self.database.Execute(sql)
+        cursor = self.database.Execute(sql, tuple(values))
         try:
             records = cursor.fetchall()
             cursor.close()

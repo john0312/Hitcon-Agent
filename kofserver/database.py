@@ -38,11 +38,22 @@ class Database:
                 logging.error(e)
                 raise
 
-    def Execute(self, command):
+    def Execute(self, command, values=()):
         for i in range(Config.conf()["dbRetryTimes"]):
             try:
                 cursor = self._conn.cursor()
-                return cursor.execute(command)     
+                return cursor.execute(command, values)
+            except sqlite3.Error as e:
+                logging.error(e)
+                self._conn = None
+                self.connect()
+                continue
+    
+    def ExecuteMany(self, command, values=[]):
+        for i in range(Config.conf()["dbRetryTimes"]):
+            try:
+                cursor = self._conn.cursor()
+                return cursor.executemany(command, values)
             except sqlite3.Error as e:
                 logging.error(e)
                 self._conn = None
