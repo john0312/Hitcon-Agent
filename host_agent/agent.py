@@ -87,6 +87,7 @@ while True:
             # print response
             connection.sendall(response)
             host_sock.close()
+            print '------------------------------------'
 
         elif data.startswith('POST /host/api/status :'):
             request_port = data.split('POST /host/api/status :')[1]
@@ -103,6 +104,7 @@ while True:
             print 'qemu-agent response : ' + str(response)
             connection.sendall(response)
             host_sock.close()
+            print '------------------------------------'
         #     print >>sys.stderr, 'sending data back to the client'
         #     connection.sendall(data)
     finally:

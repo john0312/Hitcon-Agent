@@ -20,11 +20,14 @@
 
 
 ### TODO
-1. user binding ? -> socket.gethostname()
-2. setrlimit testing
-3. logging system (V)
+1. setrlimit testing (CPU usage...)
+2. shellcode testing
+3. logging system - qemu(-) / host(V)
 
 ### Bug Fixed
 - If user input is not valid , will crash the program
 - Agent shutdown when client close connection.
 - request with non-exist pid will crash the program
+
+### Announcement
+user binding may need to use **socket.gethostname()**

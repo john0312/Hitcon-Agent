@@ -70,6 +70,7 @@ while True:
             print >>sys.stderr, 'Client exploit sending'
             response = ''
             ## FIXME: subprocess / multiprocessing
+            ## Is fork() dangerous for each user?
             sub_pid = os.fork()
             if sub_pid == 0:
                 payload = data.split('POST /api/sendexploit :')[1]
