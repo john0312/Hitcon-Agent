@@ -27,6 +27,8 @@ $ python3 kofclient.py --host=127.0.0.1 --port=29110 --action=creategame --game_
 $ python3 kofclient.py --action=startgame --game_name=game1
 $ python3 kofclient.py --action=querygame --game_name=
 $ python3 kofclient.py --action=playerreg --game_name=game1 --player=John
+$ python3 kofclient.py --action=playerissuecmd --game_name=game1 --player=John '--cmd=echo Start; sleep 30; echo End'
+$ python3 kofclient.py --action=queryscore --game_name=game1 --player=
 """
 
 import logging
@@ -47,16 +49,19 @@ def main():
     parser.add_argument('--port', type=int, default=29110, help='The port to connect to')
 
     # Commands 
-    parser.add_argument('--action', type=str, choices=['creategame', 'startgame', 'querygame', 'playerreg'], help='Action to carry out.')
+    parser.add_argument('--action', type=str, choices=['creategame', 'startgame', 'querygame', 'playerreg', 'playerissuecmd', 'queryscore'], help='Action to carry out.')
     parser.add_argument('--game_name', type=str, default='MyGame')
     parser.add_argument('--scenario', type=str, default='MyScenario')
     parser.add_argument('--player', type=str, default='John')
+    parser.add_argument('--cmd', type=str, default='sleep 30')
     
     """
     --action=creategame --game_name=<GameName> --name=<Scenario>
     --action=startgame --game_name=<GameName>
     --action=querygame [--game_name=<GameName>]
     --action=playerreg --game_name=<GameName> --player=<PlayerName>
+    --action=playerissuecmd --game_name=<GameName> --player=<PlayerName> --cmd=<Cmd>
+    --action=queryscore --game_name=<GameName> --player=<PlayerName>
     """
 
     args = parser.parse_args()
@@ -86,14 +91,32 @@ def main():
                 print("Result:")
                 print(reply)
             else:
-                print("Query game failed: %s"%(str(reply.error),))
+                print("Query game failed: %s"%(str(reply.reply.error),))
         
         if args.action == 'playerreg':
-            req = kofserver_pb2.PlayerRegister(gameName=args.game_name, playerName=args.player_name)
+            req = kofserver_pb2.PlayerRegisterReq(gameName=args.game_name, playerName=args.player)
             reply = stub.PlayerRegister(req)
             if reply.error == KOFErrorCode.ERROR_NONE:
                 print("Player register successful")
             else:
                 print("Player register failed: %s"%(str(reply.error),))
+        
+        if args.action == 'playerissuecmd':
+            req = kofserver_pb2.PlayerIssueCmdReq(gameName=args.game_name, playerName=args.player, cmd=args.cmd)
+            reply = stub.PlayerIssueCmd(req)
+            if reply.reply.error == KOFErrorCode.ERROR_NONE:
+                print("Player Issue Command successful, result: ")
+                print(reply)
+            else:
+                print("Player Issue Command failed: %s"%(str(reply.reply.error),))
+        
+        if args.action == 'queryscore':
+            req = kofserver_pb2.QueryScoreReq(gameName=args.game_name, playerName=args.player)
+            reply = stub.QueryScore(req)
+            if reply.reply.error == KOFErrorCode.ERROR_NONE:
+                print("Query score successful, Result:")
+                print(reply)
+            else:
+                print("Query score failed: %s"%(str(reply.reply.error),))
 if __name__ == "__main__":
     main()

@@ -23,11 +23,16 @@
 import sqlite3
 import logging
 from config import Config
+from concurrent import futures
 
 class Database:
     def __init__(self):
         self._conn = None
-        self.Connect()
+        # The database can only be accessed on the thread it is created.
+        self.executor = futures.ThreadPoolExecutor(max_workers=1)
+        self.executor.submit(lambda: self.Connect()).result()
+
+    # All of the methods below can only run in the executor thread.
 
     def Connect(self):
         if self._conn == None:
@@ -46,7 +51,7 @@ class Database:
             except sqlite3.Error as e:
                 logging.error(e)
                 self._conn = None
-                self.connect()
+                self.Connect()
                 continue
     
     def ExecuteMany(self, command, values=[]):
@@ -57,7 +62,7 @@ class Database:
             except sqlite3.Error as e:
                 logging.error(e)
                 self._conn = None
-                self.connect()
+                self.Connect()
                 continue
 
     def Commit(self):

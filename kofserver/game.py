@@ -24,23 +24,30 @@
 import logging
 import yaml
 import os
+import random
 import traceback
 import time
 
 import kofserver_pb2, kofserver_pb2_grpc
 from kofserver_pb2 import GameState
 from kofserver_pb2 import ErrorCode as KOFErrorCode
+from guest_agent_pb2 import ErrorCode as GuestErrorCode
 from vm_manager import VMManager, VM
 from config import Config
 from guest_agent import GuestAgent
+from scorer import Scorer
 
 class Game:
-    def __init__(self, executor, vmManager, gameName, scenarioName):
+    def __init__(self, executor, vmManager, scoreboard, scanner, gameName, scenarioName):
         self.gameName = gameName
         
         # executor is a concurrent.futures.Executor class that allows us to
         # run stuff.
         self.executor = executor
+        
+        # Store the scoreboard and scanner for future use.
+        self.scoreboard = scoreboard
+        self.scanner = scanner
         
         # Load the scenario
         self.scenarioName = scenarioName
@@ -60,10 +67,14 @@ class Game:
         # Init the player variables.
         self.users = {}
         self.portToUser = {}
+        self.pidToUser = {}
 
         # Create the VM that we'll be using for this game.
         self.vmManager = vmManager
         self.vm = vmManager.CreateVM(self.scenario['vmPath'])
+        
+        # Create the scorer for scoring the users.
+        self.scorer = Scorer(self)
     
     # Start the game.
     def Start(self):
@@ -72,6 +83,35 @@ class Game:
         # GameFunc will handle the rest.
         # ie. Initialize the VM, waiting for guest agent... etc
         return KOFErrorCode.ERROR_NONE
+
+    # Destroy the game.
+    def Destroy(self):
+        if self.state != GameState.GAME_RUNNING:
+            logging.warn("Destroying game not in running state: %s %s"%(self.gameName, str(self.state)))
+        self.state = GameState.GAME_DESTROYING1
+        return KOFErrorCode.ERROR_NONE
+
+    def PlayerIssueCmd(self, playerName, cmd):
+        if self.state != GameState.GAME_RUNNING:
+            logging.info("Player %s issued command when game %s is not running."%(playerName, self.gameName))
+            return KOFErrorCode.ERROR_GAME_NOT_RUNNING
+        if not self.scenario['allowCommand']:
+            logging.info("Player %s tried to issue command when game %s doesn't allow."%(playerName, self.gameName))
+            return KOFErrorCode.ERROR_GAME_NOT_ALLOW
+        if playerName not in self.users:
+            logging.info("Player %s not register id game %s."%(playerName, self.gameName))
+            return KOFErrorCode.ERROR_USER_NOT_REGISTERED
+        res = self.agent.RunCmd(cmd)
+        if res.reply.error != GuestErrorCode.ERROR_NONE:
+            logging.warning("Executing command '%s' failed due to agent problem %s."%(cmd, res.reply.error))
+            return KOFErrorCode.ERROR_AGENT_PROBLEM
+        self.SetPlayerPID(playerName, res.pid)
+        return KOFErrorCode.ERROR_NONE
+
+    def SetPlayerPID(self, playerName, pid):
+        assert playerName in self.users
+        self.users[playerName]['pid'] = pid
+        self.pidToUser[pid] = playerName
 
     # Return the Game protobuf for this game.
     def GetGameProto(self):
@@ -130,6 +170,7 @@ class Game:
                     # It's connected, so we can move onto the started state
                     logging.info("Agent for Game %s is ready."%(self.gameName,))
                     self.state = GameState.GAME_RUNNING
+                    self.scorer.NotifyGameStarted()
                     continue
                 # If agent is responsive, then we don't have to check the VM.
                 # Wait and try again.
@@ -137,14 +178,34 @@ class Game:
                 continue
             
             if self.state == GameState.GAME_RUNNING:
-                # TODO: Gotta score the users.
-                pass
+                playerScored = self.scorer.TryScorePlayers()
+                if not playerScored:
+                    # Don't stress it too much.
+                    time.sleep(0.3)
             
             if self.state == GameState.GAME_REBOOTING:
                 raise Exception("Reboot state not implemented yet")
                 # TODO
             
             if self.state == GameState.GAME_DESTROYING:
+                # Shutdown the VM and reset the guest agent.
+                self.agent.ResetConnection()
+                if self.vm.GetState() == VM.VMState.RUNNING:
+                    result = self.vm.Shutdown()
+                    if not result:
+                        logging.error("Failed to shutdown VM")
+                        self.state = GameState.GAME_ERROR
+                        continue
+                
+                if self.vm.GetState() == VM.State.READY:
+                    # Let's destroy it.
+                    result = self.vm.Destroy()
+                    if not result:
+                        logging.error("Failed to destroy VM")
+                        self.state = GameState.GAME_ERROR
+                        continue
+                    self.state = GameState.GAME_DESTROYED
+                
                 # Wait for the VM to get to shutdown state.
                 if self.vm.GetState() == VM.VMState.DESTROYED:
                     # It's down, so let's 
@@ -179,6 +240,7 @@ class Game:
         if port == -1:
             # This shouldn't happen, so it's an Exception not a return code.
             raise Exception("No valid port available")
+        self.portToUser[port] = username
         self.users[username]["port"] = port
         self.users[username]["pid"] = -1 # Not available yet.
         self.users[username]["pidUp"] = False # User's pid up when we last check?

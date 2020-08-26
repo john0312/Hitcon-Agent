@@ -21,13 +21,14 @@
 
 # This hosts the ScoreBoard class which records the player's score and other stats.
 import time
+import logging
 
 class ScoreBoard:
     def __init__(self, database):
         self.database = database
         # Create scoreboard table
-        self.CreateScoreTable()
-        self.CreateActionTable()
+        self.database.executor.submit(ScoreBoard.CreateScoreTable, self).result()
+        self.database.executor.submit(ScoreBoard.CreateActionTable, self).result()
 
     # This is called every time the Game logic checks if the players are alive.
     # This method is used to record players who are alive.
@@ -61,6 +62,9 @@ class ScoreBoard:
     # In this case, Alice should get 30*5 points, Bob should get 30*5+30*10
     # points, and Eve doesn't get any point.
     def LogTicks(self, gameName, playerName, portUptime, portScorePerSec, pidUptime, pidScorePerSec):
+        return self.database.executor.submit(ScoreBoard._LogTicks, self, gameName, playerName, portUptime, portScorePerSec, pidUptime, pidScorePerSec).result()
+
+    def _LogTicks(self, gameName, playerName, portUptime, portScorePerSec, pidUptime, pidScorePerSec):
         now = int(time.time())
         sql = "INSERT INTO score (game_name, player_name, port_uptime, port_score_per_sec, pid_uptime, pid_score_per_sec, create_time) VALUES (?, ?, ?, ?, ?, ?, ?);"
         values = []
@@ -92,6 +96,9 @@ class ScoreBoard:
     # Example:
     # LogPlayerAction("game1", "malice", "command", "rm -rf /")
     def LogPlayerAction(self, gameName, playerName, actionType, actionContent):
+        return self.database.executor.submit(ScoreBoard._LogPlayerAction, self, gameName, playerName, actionType, actionContent).result()
+
+    def _LogPlayerAction(self, gameName, playerName, actionType, actionContent):
         now = int(time.time())
         sql = "INSERT INTO action (game_name, player_name, type, content, create_time) VALUES (?, ?, ?, ?, ?);"
         values = (gameName, playerName, actionType, actionContent, now)
@@ -122,6 +129,9 @@ class ScoreBoard:
     # [ { "playerName": "Alice", "portUptime": 0, "portScore": 0,
     #     "pidUptime": 60, "pidScore": 300, "totalScore": 300 } ]
     def QueryScore(self, gameName, playerName):
+        return self.database.executor.submit(ScoreBoard._QueryScore, self, gameName, playerName).result()
+
+    def _QueryScore(self, gameName, playerName):
         sql = "SELECT player_name, SUM(port_uptime), SUM(port_score_per_sec), SUM(pid_uptime), SUM(pid_score_per_sec) FROM score %s GROUP BY game_name, player_name;"
         values = []
         whereSQL = ""

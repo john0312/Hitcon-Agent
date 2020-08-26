@@ -27,6 +27,9 @@ import logging
 from kofserver_pb2 import ErrorCode as KOFErrorCode
 import kofserver_pb2, kofserver_pb2_grpc
 import game
+from scoreboard import ScoreBoard
+from database import Database
+from port_scanner import PortScanner
 
 class KOFServer(kofserver_pb2_grpc.KOFServerServicer):
 
@@ -38,13 +41,19 @@ class KOFServer(kofserver_pb2_grpc.KOFServerServicer):
         self.executor = executor
         # vmManager is the VMManager instance for managing Virtual Machines.
         self.vmManager = vmManager
+        # scanner is a port scanner.
+        self.scanner = PortScanner()
+
+        # Create a scoreboard and database instance.
+        self.database = Database()
+        self.scoreboard = ScoreBoard(self.database)
 
     def CreateGame(self, request, context):
         if request.gameName in self.games:
             return kofserver_pb2.Rep(error=KOFErrorCode.ERROR_GAME_ALREADY_EXISTS)
 
         try:
-            self.games[request.gameName] = game.Game(self.executor, self.vmManager, request.gameName, request.scenarioName)
+            self.games[request.gameName] = game.Game(self.executor, self.vmManager, self.scoreboard, self.scanner, request.gameName, request.scenarioName)
         except Exception:
             logging.exception("Failed to create game")
             return kofserver_pb2.Rep(error=KOFErrorCode.ERROR_CREATE_GAME)
@@ -54,6 +63,12 @@ class KOFServer(kofserver_pb2_grpc.KOFServerServicer):
         if request.gameName not in self.games:
             return kofserver_pb2.Rep(error=KOFErrorCode.ERROR_GAME_NOT_FOUND)
         error = self.games[request.gameName].Start()
+        return kofserver_pb2.Rep(error=error)
+    
+    def DestroyGame(self, request, context):
+        if request.gameName not in self.games:
+            return kofserver_pb2.Rep(error=KOFErrorCode.ERROR_GAME_NOT_FOUND)
+        error = self.games[request.gameName].Destroy()
         return kofserver_pb2.Rep(error=error)
 
     def QueryGame(self, request, context):
@@ -79,6 +94,27 @@ class KOFServer(kofserver_pb2_grpc.KOFServerServicer):
             return kofserver_pb2.Rep(error=KOFErrorCode.ERROR_GAME_NOT_FOUND)
         error = self.games[request.gameName].QueryPlayerInfo(request.playerName)
         return kofserver_pb2.Rep(error=error)
+
+    def PlayerIssueCmd(self, request, context):
+        if request.gameName not in self.games:
+            genericReply = kofserver_pb2.Rep(error=KOFErrorCode.ERROR_GAME_NOT_FOUND)
+            return kofserver_pb2.PlayerIssueCmdRep(reply=genericReply)
+        error = self.games[request.gameName].PlayerIssueCmd(request.playerName, request.cmd)
+        genericReply = kofserver_pb2.Rep(error=error)
+        return kofserver_pb2.PlayerIssueCmdRep(reply=genericReply)
+
+    def QueryScore(self, request, context):
+        result = self.scoreboard.QueryScore(request.gameName, request.playerName)
+        genericReply = kofserver_pb2.Rep(error=KOFErrorCode.ERROR_NONE)
+        reply = kofserver_pb2.QueryScoreRep(reply=genericReply)
+        for r in result:
+            score = kofserver_pb2.PlayerScore()
+            score.playerName = r['playerName']
+            score.score = r['totalScore']
+            score.pidUptime = r['pidUptime']
+            score.portUptime = r['portUptime']
+            reply.scores.append(score)
+        return reply
 
     def Shutdown(self):
         logging.info("Shutting down all games.")

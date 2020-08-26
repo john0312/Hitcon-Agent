@@ -95,3 +95,41 @@ class GuestAgent:
         # TODO
         pass
 
+    # Return the protobuf directly.
+    def QueryProcInfo(self):
+        # reply for failure situation.
+        errorCode = guest_agent_pb2.ErrorCode.ERROR_CLIENT
+        genericRep = guest_agent_pb2.Rep(error=errorCode)
+        failureReply = guest_agent_pb2.QueryProcInfoRep(reply=genericRep)
+
+        if self.stub is None:
+            logging.warn("QueryProcInfo() called when connection is not ready.")
+            return failureReply
+
+        try:
+            result = self.stub.QueryProcInfo(guest_agent_pb2.QueryProcInfoReq())
+        except Exception:
+            logging.exception("Failed to QueryProcInfo(), resetting channel.")
+            self.ResetConnection()
+            return failureReply
+        
+        return result
+
+    def RunCmd(self, cmd):
+         # reply for failure situation.
+        errorCode = guest_agent_pb2.ErrorCode.ERROR_CLIENT
+        genericRep = guest_agent_pb2.Rep(error=errorCode)
+        failureReply = guest_agent_pb2.RunCmdRep(reply=genericRep)
+
+        if self.stub is None:
+            logging.warn("RunCmd() called when connection is not ready.")
+            return failureReply
+
+        try:
+            result = self.stub.RunCmd(guest_agent_pb2.RunCmdReq(cmd=cmd))
+        except Exception:
+            logging.exception("Failed to RunCmd(), resetting channel.")
+            self.ResetConnection()
+            return failureReply
+        
+        return result

@@ -38,6 +38,7 @@ class VM():
         self.state = VM.VMState.CREATED
     
     def Init(self):
+        # TODO
         if self.state != VM.VMState.CREATED:
             raise Exception("VM.Init() called in invalid state %s"%(str(self.state)))
         
@@ -47,6 +48,7 @@ class VM():
         return True
 
     def Boot(self):
+        # TODO
         if self.state != VM.VMState.READY:
             raise Exception("VM.Boot() called in invalid state %s"%(str(self.state)))
         logging.info("Booting VM based on %s"%(self.vmPath,))
@@ -54,11 +56,24 @@ class VM():
         # TODO
         return True
 
+    def CheckState(self):
+        # ??
+        pass
+
     def Shutdown(self):
+        # TODO
         if self.state != VM.VMState.RUNNING:
             raise Exception("VM.Shutdown() called in invalid state %s"%(str(self.state)))
         logging.info("Shutting down VM based on %s"%(self.vmPath,))
         self.state = VM.VMState.READY
+        return True
+
+    def Destroy(self):
+        # TODO
+        if self.state != VM.VMState.READY:
+            raise Exception("VM.Destroy() called in invalid state %s"%(str(self.state)))
+        logging.info("Destroying VM based on %s"%(self.vmPath,))
+        self.state = VM.VMState.DESTROYED
         return True
 
     def GetState(self):
