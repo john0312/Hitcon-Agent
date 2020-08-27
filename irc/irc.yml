@@ -9,4 +9,6 @@ channel: "#test"
 botNick: "hitconBot"
 ircPort: 6667
 bufferSize: 4096
-supervisor: "admin"
+admin: "Guest74"
+ircConnectionTimeOut: 3
+ircRetryTimes: 3

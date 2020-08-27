@@ -28,11 +28,12 @@ enum GameState {
   GAME_ERROR = 0;
 
   GAME_CREATED = 1;
-  GAME_STARTING = 2;
-  GAME_RUNNING = 3;
-  GAME_REBOOTING = 4;
-  GAME_DESTROYING = 5;
-  GAME_DESTROYED = 6;
+  GAME_STARTING1 = 2;
+  GAME_STARTING2 = 3;
+  GAME_RUNNING = 4;
+  GAME_REBOOTING = 5;
+  GAME_DESTROYING = 6;
+  GAME_DESTROYED = 8;
 }
 
 // Game represents the information regarding each game.
@@ -44,9 +45,13 @@ message Game {
 
   // State of the game.
   GameState state = 2;
+
+  // Scenario YML
+  string scenarioYML = 3;
 }
 
 // PlayerScore reports the various score of a user.
+// It may be for a specific game or for all games.
 message PlayerScore {
   // Name of the player that we are reporting.
   string playerName = 1;
@@ -59,7 +64,26 @@ message PlayerScore {
 
   // Port uptime in seconds.
   int64 portUptime = 4;
-}  
+}
+
+// PlayerInfo records the information regarding a player in a particular game.
+message PlayerInfo {
+  // Name of the player.
+  string playerName = 1;
+  
+  // The port assigned to the player in the game.
+  int32 port = 2;
+
+  // PID of the player's process in the game.
+  // -1 if the player haven't started any process.
+  int32 pid = 3;
+
+  // Is the player's port responsive the last time we try to connect?
+  bool portUp = 4;
+
+  // Is the player's process running the last time we check?
+  bool pidUp = 5;
+}
 
 // ================== API Messages ==================
 
@@ -70,7 +94,13 @@ enum ErrorCode {
   ERROR_NONE = 0; // No error, great.
   ERROR_NOT_IMPLEMENTED = 1; // The author is busy/too lazy.
   ERROR_CREATE_GAME = 2; // Failed to create game.
-  ERROR_USER_ALREADY_EXISTS = 3; // User already exists when creating user.
+  ERROR_GAME_NOT_FOUND = 3; // Specified game not found.
+  ERROR_USER_ALREADY_EXISTS = 4; // User already exists when registering user.
+  ERROR_GAME_ALREADY_EXISTS = 5; // Game already exists when creating game.
+  ERROR_GAME_NOT_ALLOW = 6; // Game scenario doesn't allow this operation.
+  ERROR_GAME_NOT_RUNNING = 7; // Game's not running.
+  ERROR_USER_NOT_REGISTERED = 8; // User/player is not registered in this game.
+  ERROR_AGENT_PROBLEM = 9; // There's a problem with the agent.
 }
 
 // Rep (Reply) is a generic response for RPC calls that uses it.
@@ -107,6 +137,29 @@ message QueryGameRep {
   repeated Game games = 2;
 }
 
+message PlayerRegisterReq {
+  // Which game to register for?
+  string gameName = 1;
+
+  // Name of the player registering.
+  string playerName = 2;
+}
+
+message PlayerInfoReq {
+  // Which game are querying the player info?
+  string gameName = 1;
+ 
+  // Name of the player we want info for? Leave empty for all.
+  string playerName = 2;
+}
+
+message PlayerInfoRep {
+  // Reply to indicate general status/error.
+  Rep reply = 1;
+
+  repeated PlayerInfo info = 2;
+}
+
 message PlayerIssueSCReq {
   // Which game?
   string gameName = 1;
@@ -119,6 +172,24 @@ message PlayerIssueSCReq {
 }
 
 message PlayerIssueSCRep {
+  // General status
+  Rep reply = 1;
+
+  // TODO: More fields on PID and stuffs?
+}
+
+message PlayerIssueCmdReq {
+  // Which game?
+  string gameName = 1;
+
+  // Who's issuing it?
+  string playerName = 2;
+
+  // The command.
+  string cmd = 3;
+}
+
+message PlayerIssueCmdRep {
   // General status
   Rep reply = 1;
 
@@ -156,9 +227,14 @@ service KOFServer {
   rpc QueryGame(QueryGameReq) returns (QueryGameRep) {}
   
   // Player interactions
+  // Register the player for the game, need to be done once per game per player.
+  rpc PlayerRegister(PlayerRegisterReq) returns (Rep) {}
+  // Get information regarding a player in a specific game.
+  rpc PlayerInfo(PlayerInfoReq) returns (PlayerInfoRep) {}
+
   // PlayerIssueSC allows the player to run shell code on the host.
   rpc PlayerIssueSC(PlayerIssueSCReq) returns (PlayerIssueSCRep) {}
-  // TODO: rpc PlayerIssueCmd(PlayerIssueCmdReq) returns (PlayerIssueCmdRep)
+  rpc PlayerIssueCmd(PlayerIssueCmdReq) returns (PlayerIssueCmdRep) {}
   // TODO: rpc PlayerIssueURL(playerIssueURLReq) returns (PlayerIssueURLRep)
 
   // Scoreboard related
