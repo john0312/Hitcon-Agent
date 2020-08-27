@@ -35,7 +35,7 @@ class IRC:
         self.executor = futures.ThreadPoolExecutor(max_workers=1)
         self.executor.submit(lambda: self.Connect()).result()
 
-    # TODO: Need to fix missconnection
+    # TODO: Need to fix missconnection situation, ensure the connecting quality.
     def Connect(self):
         for i in range(Config.conf()["ircRetryTimes"]):
             try:
@@ -67,46 +67,64 @@ class IRC:
                     t = text.split(":")
                     nick = t[1].split("!")[0]
                     message = t[-1]
-                    
-                    ### TODO: Check admin register
+
+                    # TODO: Check admin register
+                    # TODO: Start with character '/'
                     if nick == Config.conf()["admin"]:
                         if message.startswith("CreateGame ") == True:
-                            message = message.split(" ")
-                            if len(message) != 3:
-                                logging.error("CreateGame parameters format error!")
-                                continue
-                            self.gameName = message[1]
-                            self.scenario = message[2]
-                            self.agent.CreateGame(self.gameName, self.scenario)
+                            self.CreateGame(message)
                         elif message.startswith("StartGame ") == True:
-                            message = message.split(" ")
-                            if len(message) != 2:
-                                logging.error("StartGame parameters format error!")
-                                continue
-                            self.gameName = message[1]
-                            self.agent.StartGame(self.gameName)
+                            self.StartGame(message)
                         elif message.startswith("DestroyGame ") == True:
-                            self.gameName = ""
-                            pass
+                            self.DestroyGame()
                         else:
                             pass
                     else:
-                        # TODO: Start with character '/'
                         if message.startswith("Cmd ") == True:
-                            message = message.split(" ")
-                            if len(message) != 2:
-                                logging.error("Cmd parameters format error!")
-                                continue
-                            self.agent.PlayerIssueCmd(self.gameName, nick, message[1])
+                            self.PlayerIssueSC(self.gameName, nick, message)
                         elif message.startswith("Shellcode ") == True:
-                            message = message.split(" ")[1]
-                             if len(message) != 2:
-                                logging.error("Shellcode parameters format error!")
-                                continue
-                            b = base64.b64encode(message[1].encode())
-                            self.agent.PlayerIssueSC(self.gameName, nick, b)
+                            self.PlayerIssueSC(self.gameName, nick, message)
                         else:
                             pass
-
         except:
             logging.exception("IRC crashed")
+
+    def CreateGame(self, message):
+        message = message.split(" ")
+        if len(message) != 3:
+            logging.error("CreateGame parameters format error!")
+            return
+        self.gameName = message[1]
+        self.scenario = message[2]
+        self.agent.CreateGame(self.gameName, self.scenario)
+    
+    def StartGame(self, message):
+        message = message.split(" ")
+        if len(message) != 2:
+            logging.error("StartGame parameters format error!")
+            return
+        self.agent.StartGame(message[1])
+
+    # TODO: Destroy function
+    def DestroyGame(self):
+        self.gameName = ""
+        self.scenario = ""
+        pass
+
+    def PlayerRegister(self, gameName, nick):
+        self.agent.PlayerRegister(gameName, nick)    
+    
+    def PlayerIssueSC(self, gameName, nick, message):
+        message = message.split(" ")[1]
+        if len(message) != 2:
+            logging.error("Shellcode parameters format error!")
+            return
+        encodedMessage = base64.b64encode(message[1].encode())
+        self.agent.PlayerIssueSC(gameName, nick, encodedMessage)
+    
+    def PlayerIssueCmd(self, gameName, nick, message):
+        message = message.split(" ")
+        if len(message) != 2:
+            logging.error("Cmd parameters format error!")
+            return
+        self.agent.PlayerIssueCmd(gameName, nick, message[1])

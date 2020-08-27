@@ -24,6 +24,7 @@ import logging
 import grpc
 from config import Config
 import kofserver_pb2, kofserver_pb2_grpc
+from kofserver_pb2 import ErrorCode as KOFErrorCode
 
 class Agent:
     def __init__(self):
@@ -77,6 +78,14 @@ class Agent:
         else:
             print("Start game failed: %s"%(str(reply.error),))
     
+    def PlayerRegister(self, gameName, playerName):
+        req = kofserver_pb2.PlayerRegisterReq(gameName=gameName, playerName=playerName)
+        reply = self.stub.PlayerRegister(req)
+        if reply.error == KOFErrorCode.ERROR_NONE:
+            print("Player register successful")
+        else:
+            print("Player register failed: %s"%(str(reply.error),))
+
     # TODO: Destory game
     # def DestroyGame(self):
     #     pass
