@@ -53,7 +53,6 @@ class IRC:
             self.irc.send(("NICK " + botNick + "\n").encode())
             
             while True:
-                ### Guest!Guest@protectedhost-2D06700E.hinet-ip.hinet.net PRIVMSG #test :ds
                 text = self.irc.recv(Config.conf()["bufferSize"]).strip().decode()
                 if text.find("PING") != -1:
                     self.irc.send(("PONG " + text.split()[1] + "\n").encode())
@@ -76,7 +75,7 @@ class IRC:
                         elif message.startswith("StartGame ") == True:
                             self.StartGame(message)
                         elif message.startswith("DestroyGame ") == True:
-                            self.DestroyGame()
+                            self.DestroyGame(message)
                         else:
                             pass
                     else:
@@ -105,11 +104,14 @@ class IRC:
             return
         self.agent.StartGame(message[1])
 
-    # TODO: Destroy function
-    def DestroyGame(self):
+    def DestroyGame(self, message):
+        message = message.split(" ")
+        if len(message) != 2:
+            logging.error("StartGame parameters format error!")
+            return
+        self.agent.DestroyGame(message[1])
         self.gameName = ""
         self.scenario = ""
-        pass
 
     def PlayerRegister(self, gameName, nick):
         self.agent.PlayerRegister(gameName, nick)    

@@ -44,6 +44,38 @@ class Agent:
         # The kofserver gRPC stub
         self.stub = kofserver_pb2_grpc.KOFServerStub(self.channel)
 
+    def CreateGame(self, gameName, scenarioName):
+        req = kofserver_pb2.CreateGameReq(gameName=gameName, scenarioName=scenarioName)
+        reply = self.stub.CreateGame(req)
+        if reply.error == KOFErrorCode.ERROR_NONE:
+            print("Create game successful")
+        else:
+            print("Create game failed: %s"%(str(reply.error),))
+    
+    def StartGame(self, gameName):
+        req = kofserver_pb2.StartGameReq(gameName=gameName)
+        reply = self.stub.StartGame(req)
+        if reply.error == KOFErrorCode.ERROR_NONE:
+            print("Start game successful")
+        else:
+            print("Start game failed: %s"%(str(reply.error),))
+
+    def DestroyGame(self, gameName):
+        req = kofserver_pb2.DestroyGame(gameName=gameName)
+        reply = self.stub.DestroyGame(req)
+        if reply.error == KOFErrorCode.ERROR_NONE:
+            print("Destroy game successful")
+        else:
+            print("Destroy game failed: %s"%(str(reply.error),))
+    
+    def PlayerRegister(self, gameName, playerName):
+        req = kofserver_pb2.PlayerRegisterReq(gameName=gameName, playerName=playerName)
+        reply = self.stub.PlayerRegister(req)
+        if reply.error == KOFErrorCode.ERROR_NONE:
+            print("Player register successful")
+        else:
+            print("Player register failed: %s"%(str(reply.error),))
+
     def PlayerIssueSC(self, gameName, playerName, shellCode):
         req = kofserver_pb2.PlayerIssueSCReq(gameName=gameName, playerName=playerName, shellCode=shellCode)
         reply = self.stub.PlayerIssueSC(req)
@@ -61,31 +93,3 @@ class Agent:
             print(reply)
         else:
             print("Player Issue Command failed: %s"%(str(reply.reply.error),))
-
-    def CreateGame(self, gameName, scenarioName):
-        req = kofserver_pb2.CreateGameReq(gameName=gameName, scenarioName=scenarioName)
-        reply = self.stub.CreateGame(req)
-        if reply.error == KOFErrorCode.ERROR_NONE:
-            print("Create game successful")
-        else:
-            print("Create game failed: %s"%(str(reply.error),))
-    
-    def StartGame(self, gameName):
-        req = kofserver_pb2.StartGameReq(gameName=gameName)
-        reply = self.stub.StartGame(req)
-        if reply.error == KOFErrorCode.ERROR_NONE:
-            print("Start game successful")
-        else:
-            print("Start game failed: %s"%(str(reply.error),))
-    
-    def PlayerRegister(self, gameName, playerName):
-        req = kofserver_pb2.PlayerRegisterReq(gameName=gameName, playerName=playerName)
-        reply = self.stub.PlayerRegister(req)
-        if reply.error == KOFErrorCode.ERROR_NONE:
-            print("Player register successful")
-        else:
-            print("Player register failed: %s"%(str(reply.error),))
-
-    # TODO: Destory game
-    # def DestroyGame(self):
-    #     pass
