@@ -47,6 +47,7 @@ class IRC:
 
     def Run(self):
         try:
+            # TODO: Modularize IRC action
             botNick = Config.conf()["botNick"]
             channel = Config.conf()["channel"]
             self.irc.send(("USER " + botNick + " " + botNick + " " + botNick + " :This is a hitcon bot\n").encode())
@@ -67,6 +68,7 @@ class IRC:
                     nick = t[1].split("!")[0]
                     message = t[-1]
 
+                    # TODO: User register
                     # TODO: Check admin register
                     # TODO: Start with character '/'
                     if nick == Config.conf()["admin"]:
