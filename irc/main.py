@@ -26,6 +26,7 @@ from irc import IRC
 from agent import Agent
 from config import Config
 
+# TODO: Enhance performance
 def main():
     # Setup logging
     logging.basicConfig(level=logging.INFO)
@@ -38,7 +39,7 @@ def main():
 
     # Initialize IRC
     irc = IRC(agent)
-    irc.run()
+    irc.Run()
 
 if __name__ == '__main__':
     main()

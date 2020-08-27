@@ -25,17 +25,27 @@ import sys
 import logging
 import base64
 from config import Config
+from concurrent import futures
 
 class IRC:
     def __init__(self, agent):
-        try:
-            self.irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.irc.connect((Config.conf()["ircServer"], Config.conf()["ircPort"]))
-            self.agent = agent
-        except:
-            raise
-        
-    def run(self):
+        self.agent = agent
+        self.gameName = ""
+        self.scenario = ""
+        self.executor = futures.ThreadPoolExecutor(max_workers=1)
+        self.executor.submit(lambda: self.Connect()).result()
+
+    # TODO: Need to fix missconnection
+    def Connect(self):
+        for i in range(Config.conf()["ircRetryTimes"]):
+            try:
+                self.irc = socket.create_connection((Config.conf()["ircServer"], Config.conf()["ircPort"]), timeout=Config.conf()["ircConnectionTimeOut"])
+                self.irc.settimeout(None)
+            except Error as e:
+                logging.error(e)
+                continue
+
+    def Run(self):
         try:
             botNick = Config.conf()["botNick"]
             channel = Config.conf()["channel"]
@@ -56,28 +66,47 @@ class IRC:
                     logging.info(text)
                     t = text.split(":")
                     nick = t[1].split("!")[0]
-                    shellcode = t[-1]
-                    b = base64.b64encode(shellcode.encode())
+                    message = t[-1]
                     
                     ### TODO: Check admin register
-                    if nick == Config.conf()["supervisor"]:
-                        if shellcode == "/CreateGame":
-                            ### TODO: CreateGame
-                            pass
-                        elif shellcode == "/StartGame":
-                            ### TODO: StartGame
-                            pass
-                        elif shellcode == "/DestroyGame":
-                            ### TODO: DestroyGame
+                    if nick == Config.conf()["admin"]:
+                        if message.startswith("CreateGame ") == True:
+                            message = message.split(" ")
+                            if len(message) != 3:
+                                logging.error("CreateGame parameters format error!")
+                                continue
+                            self.gameName = message[1]
+                            self.scenario = message[2]
+                            self.agent.CreateGame(self.gameName, self.scenario)
+                        elif message.startswith("StartGame ") == True:
+                            message = message.split(" ")
+                            if len(message) != 2:
+                                logging.error("StartGame parameters format error!")
+                                continue
+                            self.gameName = message[1]
+                            self.agent.StartGame(self.gameName)
+                        elif message.startswith("DestroyGame ") == True:
+                            self.gameName = ""
                             pass
                         else:
                             pass
                     else:
-                        ### TODO: Test gRPC
-                        pid = self.agent.shellcode("test", nick, shellcode)
-                        if pid != None:
-                            reply = "PRIVMSG %s : %s ==> pid: %s \n" % (channel, str(nick), str(pid))
-                            self.irc.send(reply)
+                        # TODO: Start with character '/'
+                        if message.startswith("Cmd ") == True:
+                            message = message.split(" ")
+                            if len(message) != 2:
+                                logging.error("Cmd parameters format error!")
+                                continue
+                            self.agent.PlayerIssueCmd(self.gameName, nick, message[1])
+                        elif message.startswith("Shellcode ") == True:
+                            message = message.split(" ")[1]
+                             if len(message) != 2:
+                                logging.error("Shellcode parameters format error!")
+                                continue
+                            b = base64.b64encode(message[1].encode())
+                            self.agent.PlayerIssueSC(self.gameName, nick, b)
+                        else:
+                            pass
 
-        except Exception:
+        except:
             logging.exception("IRC crashed")
