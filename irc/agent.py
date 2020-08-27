@@ -43,21 +43,40 @@ class Agent:
         # The kofserver gRPC stub
         self.stub = kofserver_pb2_grpc.KOFServerStub(self.channel)
 
-    def shellcode(self, game_name, player_name, shellcode):
-        response = self.stub.PlayerIssueSC(kofserver_pb2.PlayerIssueSC(gameName=game_name, playerName=player_name, shellcode=shellcode))
-        if response.error == kofserver_pb2.ErrorCode.ERROR_NONE:
-            print("shellcode successful")
-            # TODO: Return PID
-            # return PID
+    def PlayerIssueSC(self, gameName, playerName, shellCode):
+        req = kofserver_pb2.PlayerIssueSCReq(gameName=gameName, playerName=playerName, shellCode=shellCode)
+        reply = self.stub.PlayerIssueSC(req)
+        if reply.reply.error == KOFErrorCode.ERROR_NONE:
+            print("Player Issue Command successful, result: ")
+            print(reply)
         else:
-            print("shellcode failed: %s"%(str(response.error),))
-            return None
+            print("Player Issue Command failed: %s"%(str(reply.reply.error),))
     
-    def create_game(self):
-        pass
+    def PlayerIssueCmd(self, gameName, playerName, cmd):
+        req = kofserver_pb2.PlayerIssueCmdReq(gameName=gameName, playerName=playerName, cmd=cmd)
+        reply = self.stub.PlayerIssueCmd(req)
+        if reply.reply.error == KOFErrorCode.ERROR_NONE:
+            print("Player Issue Command successful, result: ")
+            print(reply)
+        else:
+            print("Player Issue Command failed: %s"%(str(reply.reply.error),))
+
+    def CreateGame(self, gameName, scenarioName):
+        req = kofserver_pb2.CreateGameReq(gameName=gameName, scenarioName=scenarioName)
+        reply = self.stub.CreateGame(req)
+        if reply.error == KOFErrorCode.ERROR_NONE:
+            print("Create game successful")
+        else:
+            print("Create game failed: %s"%(str(reply.error),))
     
-    def start_game(self):
-        pass
+    def StartGame(self, gameName):
+        req = kofserver_pb2.StartGameReq(gameName=gameName)
+        reply = self.stub.StartGame(req)
+        if reply.error == KOFErrorCode.ERROR_NONE:
+            print("Start game successful")
+        else:
+            print("Start game failed: %s"%(str(reply.error),))
     
-    def destroy_game(self):
-        pass
+    # TODO: Destory game
+    # def DestroyGame(self):
+    #     pass
