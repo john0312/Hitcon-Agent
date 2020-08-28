@@ -44,6 +44,8 @@ enum ErrorCode {
   ERROR_NOT_IMPLEMENTED = 1;
   // Failed to run command, check log for stack trace.
   ERROR_RUN_CMD_FAILED = 2;
+  // Problem occured on the client side.
+  ERROR_CLIENT = 3;
 }
 
 // Rep (Reply) is a generic response for RPC calls that uses it.
