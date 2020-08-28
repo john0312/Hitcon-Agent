@@ -26,6 +26,7 @@ import logging
 import os
 import subprocess
 import random
+import psutil
 
 from shellexec import child_task
 import guest_agent_pb2, guest_agent_pb2_grpc
@@ -76,4 +77,17 @@ class GuestAgent(guest_agent_pb2_grpc.GuestAgentServicer):
         reply = guest_agent_pb2.RunSCRep(reply=genericReply, pid=pid)
         return reply
 
-    
+    def QueryProcInfo(self, request, context):
+        result = []
+        for proc in psutil.process_iter(["name", "cmdline", "cpu_times", "memory_info"]):
+            pinfo = guest_agent_pb2.ProcInfo(pid=proc.pid)
+            pinfo.name = proc.info['name']
+            pinfo.cmdline = ' '.join(proc.info['cmdline'])
+            pinfo.cpu_time = proc.info['cpu_times'].user + proc.info['cpu_times'].system
+            pinfo.memory_usage = proc.info['memory_info'].rss
+            result.append(pinfo)
+        genericReply = guest_agent_pb2.Rep(error=guest_agent_pb2.ErrorCode.ERROR_NONE)
+        reply = guest_agent_pb2.QueryProcInfoRep(reply=genericReply)
+        for r in result:
+            reply.info.append(r)
+        return reply
