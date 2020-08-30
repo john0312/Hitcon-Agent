@@ -76,6 +76,9 @@ class Game:
         # Create the scorer for scoring the users.
         self.scorer = Scorer(self)
     
+    def __del__(self):
+        self.StopGameFunc()
+
     # Start the game.
     def Start(self):
         # Set it to we are starting.
@@ -88,7 +91,7 @@ class Game:
     def Destroy(self):
         if self.state != GameState.GAME_RUNNING:
             logging.warn("Destroying game not in running state: %s %s"%(self.gameName, str(self.state)))
-        self.state = GameState.GAME_DESTROYING1
+        self.state = GameState.GAME_DESTROYING
         return KOFErrorCode.ERROR_NONE
 
     def PlayerIssueCmd(self, playerName, cmd):
@@ -197,7 +200,7 @@ class Game:
                         self.state = GameState.GAME_ERROR
                         continue
                 
-                if self.vm.GetState() == VM.State.READY:
+                if self.vm.GetState() == VM.VMState.READY:
                     # Let's destroy it.
                     result = self.vm.Destroy()
                     if not result:
@@ -269,6 +272,17 @@ class Game:
         return result
 
     def Shutdown(self):
+        self.state = GameState.GAME_ERROR
+        if self.vm.GetState() == VM.VMState.RUNNING:
+            result = self.vm.Shutdown()
+            if not result:
+                logging.error("Failed to shutdown VM during shutdown")
+            
+        if self.vm.GetState() == VM.VMState.READY:
+            result = self.vm.Destroy()
+            if not result:
+                logging.error("Failed to destroy VM during shutdown")
+                    
         self.gameTaskExit = True
         # Wait for it to terminate
         self.gameTask.result()

@@ -25,6 +25,7 @@
 Example usage
 $ python3 kofclient.py --host=127.0.0.1 --port=29110 --action=creategame --game_name=game1 --scenario=MyScenario
 $ python3 kofclient.py --action=startgame --game_name=game1
+$ python3 kofclient.py --action=destroygame --game_name=game1
 $ python3 kofclient.py --action=querygame --game_name=
 $ python3 kofclient.py --action=playerreg --game_name=game1 --player=John
 $ python3 kofclient.py --action=playerissuecmd --game_name=game1 --player=John '--cmd=echo Start; sleep 30; echo End'
@@ -49,7 +50,7 @@ def main():
     parser.add_argument('--port', type=int, default=29110, help='The port to connect to')
 
     # Commands 
-    parser.add_argument('--action', type=str, choices=['creategame', 'startgame', 'querygame', 'playerreg', 'playerissuecmd', 'queryscore'], help='Action to carry out.')
+    parser.add_argument('--action', type=str, choices=['creategame', 'startgame', 'destroygame', 'querygame', 'playerreg', 'playerissuecmd', 'queryscore'], help='Action to carry out.')
     parser.add_argument('--game_name', type=str, default='MyGame')
     parser.add_argument('--scenario', type=str, default='MyScenario')
     parser.add_argument('--player', type=str, default='John')
@@ -58,6 +59,7 @@ def main():
     """
     --action=creategame --game_name=<GameName> --name=<Scenario>
     --action=startgame --game_name=<GameName>
+    --action=destroygame --game_name=<GameName>
     --action=querygame [--game_name=<GameName>]
     --action=playerreg --game_name=<GameName> --player=<PlayerName>
     --action=playerissuecmd --game_name=<GameName> --player=<PlayerName> --cmd=<Cmd>
@@ -83,7 +85,15 @@ def main():
                 print("Start game successful")
             else:
                 print("Start game failed: %s"%(str(reply.error),))
-
+        
+        if args.action == 'destroygame':
+            req = kofserver_pb2.DestroyGameReq(gameName=args.game_name)
+            reply = stub.DestroyGame(req)
+            if reply.error == KOFErrorCode.ERROR_NONE:
+                print("Destroy game successful")
+            else:
+                print("Destroy game failed: %s"%(str(reply.error),))
+        
         if args.action == 'querygame':
             req = kofserver_pb2.QueryGameReq(gameName=args.game_name)
             reply = stub.QueryGame(req)

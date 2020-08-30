@@ -25,6 +25,7 @@
 import logging
 
 from kofserver_pb2 import ErrorCode as KOFErrorCode
+from kofserver_pb2 import GameState
 import kofserver_pb2, kofserver_pb2_grpc
 import game
 from scoreboard import ScoreBoard
@@ -49,6 +50,7 @@ class KOFServer(kofserver_pb2_grpc.KOFServerServicer):
         self.scoreboard = ScoreBoard(self.database)
 
     def CreateGame(self, request, context):
+        self._GarbageCollectGames()
         if request.gameName in self.games:
             return kofserver_pb2.Rep(error=KOFErrorCode.ERROR_GAME_ALREADY_EXISTS)
 
@@ -60,18 +62,21 @@ class KOFServer(kofserver_pb2_grpc.KOFServerServicer):
         return kofserver_pb2.Rep(error=KOFErrorCode.ERROR_NONE)
 
     def StartGame(self, request, context):
+        self._GarbageCollectGames()
         if request.gameName not in self.games:
             return kofserver_pb2.Rep(error=KOFErrorCode.ERROR_GAME_NOT_FOUND)
         error = self.games[request.gameName].Start()
         return kofserver_pb2.Rep(error=error)
     
     def DestroyGame(self, request, context):
+        self._GarbageCollectGames()
         if request.gameName not in self.games:
             return kofserver_pb2.Rep(error=KOFErrorCode.ERROR_GAME_NOT_FOUND)
         error = self.games[request.gameName].Destroy()
         return kofserver_pb2.Rep(error=error)
 
     def QueryGame(self, request, context):
+        self._GarbageCollectGames()
         results = []
         if request.gameName != "":
             if request.gameName not in self.games:
@@ -121,4 +126,9 @@ class KOFServer(kofserver_pb2_grpc.KOFServerServicer):
         for g in self.games:
             self.games[g].Shutdown()
     
-
+    def _GarbageCollectGames(self):
+        newGames = {}
+        for g in self.games:
+            if self.games[g].GetGameProto().state != GameState.GAME_DESTROYED:
+                newGames[g] = self.games[g]
+        self.games = newGames
