@@ -132,7 +132,7 @@ class ScoreBoard:
         return self.database.executor.submit(ScoreBoard._QueryScore, self, gameName, playerName).result()
 
     def _QueryScore(self, gameName, playerName):
-        sql = "SELECT player_name, SUM(port_uptime), SUM(port_score_per_sec), SUM(pid_uptime), SUM(pid_score_per_sec) FROM score %s GROUP BY game_name, player_name;"
+        sql = "SELECT player_name, SUM(port_uptime), SUM(port_uptime*port_score_per_sec) AS total_port_score, SUM(pid_uptime), SUM(pid_uptime*pid_score_per_sec) AS total_pid_score FROM score %s GROUP BY game_name, player_name;"
         values = []
         whereSQL = ""
         if gameName != "":
@@ -150,8 +150,8 @@ class ScoreBoard:
             results = []
             if len(records) > 0:
                 for r in records:
-                    portScore = r[1] * r[2]
-                    pidScore = r[3] * r[4]
+                    portScore = r[2]
+                    pidScore = r[4]
                     totalScore = portScore + pidScore
                     # If playerName is "", then all players with non-zero scores are returned.
                     if playerName == "" and totalScore == 0:
