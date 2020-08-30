@@ -1,5 +1,7 @@
 # scenarioDir: "/kof/scenario"
 scenarioDir: "./scenario"
+diskImageDir: "./diskImages"
+tmpDiskImageDir: "./tmpImages"
 
 agentConnectTimeout: 3.0
 

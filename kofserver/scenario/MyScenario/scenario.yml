@@ -1,9 +1,9 @@
 # Path to our VM configuration
-vmPath: "/dev/null"
+vmPath: "vm.yml"
 
-ip: "127.0.0.1"
-pidCheckInterval: 10.0
-portCheckInterval: 10.0
+ip: "192.168.122.5"
+pidCheckInterval: 5.0
+portCheckInterval: 5.0
 
 portScorePerSec: 0.0
 pidScorePerSec: 1.0

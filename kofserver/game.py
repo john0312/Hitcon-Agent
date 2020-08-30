@@ -71,7 +71,7 @@ class Game:
 
         # Create the VM that we'll be using for this game.
         self.vmManager = vmManager
-        self.vm = vmManager.CreateVM(self.scenario['vmPath'])
+        self.vm = vmManager.CreateVM(self.scenario['vmPath'], self.scenarioName)
         
         # Create the scorer for scoring the users.
         self.scorer = Scorer(self)
@@ -276,6 +276,7 @@ class Game:
     @staticmethod
     def LoadScenario(scenarioName):
         scenarioDir = Config.conf()['scenarioDir']
+        scenarioDir = os.path.abspath(scenarioDir)
         scenarioPath = os.path.join(scenarioDir, scenarioName)
         ymlPath = os.path.join(scenarioPath, "scenario.yml")
         try:
@@ -283,4 +284,8 @@ class Game:
                 result = yaml.load(f, Loader=yaml.FullLoader)
         except Exception:
             logging.exception("Failed to open scenario.yml file %s"%ymlPath)
+            raise
+        # If vmPath is relative, we convert it to absolute here.
+        if not os.path.isabs(result['vmPath']):
+            result['vmPath'] = os.path.join(scenarioPath, result['vmPath'])
         return result
