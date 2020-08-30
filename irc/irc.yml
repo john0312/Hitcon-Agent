@@ -10,6 +10,4 @@ botNickName: "hitconBot"
 ircPort: 6667
 ircSSLPort: 6697
 bufferSize: 4096
-admin: "Guest74"
-ircConnectionTimeOut: 3
-ircRetryTimes: 3
+admin: "Admin"

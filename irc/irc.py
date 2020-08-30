@@ -30,8 +30,8 @@ class IRC(pydle.Client):
         await self.join(self.channel)
         logging.info("Bot Join %s" % (self.channel))
 
-    async def on_message(self, target, source, message):
-        if source == Config.conf()["admin"]:
+    async def on_message(self, target, nick, message):
+        if nick == Config.conf()["admin"]:
             if message.startswith("CreateGame ") == True:
                 self.CreateGame(message)
             elif message.startswith("StartGame ") == True:
@@ -41,6 +41,11 @@ class IRC(pydle.Client):
             else:
                 pass
         else:
+            if self.gameName == None or self.scenario == None:
+                return
+            if nick not in self.userSet:
+                self.PlayerRegister(self.gameName, nick)
+                self.userSet.add(nick)
             if message.startswith("Cmd ") == True:
                 self.PlayerIssueSC(self.gameName, nick, message)
             elif message.startswith("Shellcode ") == True:
@@ -55,8 +60,9 @@ class IRC(pydle.Client):
         self.agent = agent
     
     def ResetGame(self):
-        self.gameName = ""
-        self.scenario = ""
+        self.userSet = set()
+        self.gameName = None
+        self.scenario = None
 
     def CreateGame(self, message):
         message = message.split(" ")
@@ -86,7 +92,7 @@ class IRC(pydle.Client):
         self.agent.PlayerRegister(gameName, nick)    
     
     def PlayerIssueSC(self, gameName, nick, message):
-        message = message.split(" ")[1]
+        message = message.split(" ")
         if len(message) != 2:
             logging.error("Shellcode parameters format error!")
             return
