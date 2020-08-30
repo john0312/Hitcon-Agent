@@ -19,9 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import sys
 import logging
-import multiprocessing
 from irc import IRC
 from agent import Agent
 from config import Config
@@ -35,11 +33,14 @@ def main():
     Config.Init()
 
     # Initialize agent
-    agent = Agent()
+    agent = Agent()   
 
     # Initialize IRC
-    irc = IRC(agent)
-    irc.Run()
+    irc = IRC(nickname=Config.conf()['botNickName'])
+    irc.SetChannel(Config.conf()['channel'])
+    irc.ResetGame()
+    irc.SetAgent(agent)
+    irc.run(hostname=Config.conf()['ircServer'], port=Config.conf()['ircSSLPort'], tls=True, tls_verify=True)
 
 if __name__ == '__main__':
     main()

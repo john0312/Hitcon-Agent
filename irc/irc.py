@@ -20,75 +20,43 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import socket
-import sys
 import logging
 import base64
+import pydle
 from config import Config
-from concurrent import futures
 
-class IRC:
-    def __init__(self, agent):
+class IRC(pydle.Client):
+    async def on_connect(self):
+        await self.join(self.channel)
+        logging.info("Bot Join %s" % (self.channel))
+
+    async def on_message(self, target, source, message):
+        if source == Config.conf()["admin"]:
+            if message.startswith("CreateGame ") == True:
+                self.CreateGame(message)
+            elif message.startswith("StartGame ") == True:
+                self.StartGame(message)
+            elif message.startswith("DestroyGame ") == True:
+                self.DestroyGame(message)
+            else:
+                pass
+        else:
+            if message.startswith("Cmd ") == True:
+                self.PlayerIssueSC(self.gameName, nick, message)
+            elif message.startswith("Shellcode ") == True:
+                self.PlayerIssueSC(self.gameName, nick, message)
+            else:
+                pass
+
+    def SetChannel(self, channel):
+        self.channel = channel
+    
+    def SetAgent(self, agent):
         self.agent = agent
+    
+    def ResetGame(self):
         self.gameName = ""
         self.scenario = ""
-        self.executor = futures.ThreadPoolExecutor(max_workers=1)
-        self.executor.submit(lambda: self.Connect()).result()
-
-    # TODO: Need to fix missconnection situation, ensure the connecting quality.
-    def Connect(self):
-        for i in range(Config.conf()["ircRetryTimes"]):
-            try:
-                self.irc = socket.create_connection((Config.conf()["ircServer"], Config.conf()["ircPort"]), timeout=Config.conf()["ircConnectionTimeOut"])
-                self.irc.settimeout(None)
-            except Error as e:
-                logging.error(e)
-                continue
-
-    def Run(self):
-        try:
-            # TODO: Modularize IRC action
-            botNick = Config.conf()["botNick"]
-            channel = Config.conf()["channel"]
-            self.irc.send(("USER " + botNick + " " + botNick + " " + botNick + " :This is a hitcon bot\n").encode())
-            self.irc.send(("NICK " + botNick + "\n").encode())
-            
-            while True:
-                text = self.irc.recv(Config.conf()["bufferSize"]).strip().decode()
-                if text.find("PING") != -1:
-                    self.irc.send(("PONG " + text.split()[1] + "\n").encode())
-                
-                if text.find("255 " + botNick) != -1:
-                    self.irc.send(("JOIN " + channel + "\n").encode())
-                    logging.info(botNick + " has joined!")
-
-                if text.find("PRIVMSG " + channel) != -1:
-                    logging.info(text)
-                    t = text.split(":")
-                    nick = t[1].split("!")[0]
-                    message = t[-1]
-
-                    # TODO: User register
-                    # TODO: Check admin register
-                    # TODO: Start with character '/'
-                    if nick == Config.conf()["admin"]:
-                        if message.startswith("CreateGame ") == True:
-                            self.CreateGame(message)
-                        elif message.startswith("StartGame ") == True:
-                            self.StartGame(message)
-                        elif message.startswith("DestroyGame ") == True:
-                            self.DestroyGame(message)
-                        else:
-                            pass
-                    else:
-                        if message.startswith("Cmd ") == True:
-                            self.PlayerIssueSC(self.gameName, nick, message)
-                        elif message.startswith("Shellcode ") == True:
-                            self.PlayerIssueSC(self.gameName, nick, message)
-                        else:
-                            pass
-        except:
-            logging.exception("IRC crashed")
 
     def CreateGame(self, message):
         message = message.split(" ")
@@ -112,8 +80,7 @@ class IRC:
             logging.error("StartGame parameters format error!")
             return
         self.agent.DestroyGame(message[1])
-        self.gameName = ""
-        self.scenario = ""
+        self.ResetGame()
 
     def PlayerRegister(self, gameName, nick):
         self.agent.PlayerRegister(gameName, nick)    
