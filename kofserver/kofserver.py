@@ -125,7 +125,9 @@ class KOFServer(kofserver_pb2_grpc.KOFServerServicer):
         logging.info("Shutting down all games.")
         for g in self.games:
             self.games[g].Shutdown()
-    
+        self.scanner.Shutdown()
+        self.scanner = None
+
     def _GarbageCollectGames(self):
         newGames = {}
         for g in self.games:

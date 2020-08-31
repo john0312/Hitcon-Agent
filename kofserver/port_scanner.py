@@ -21,9 +21,47 @@
 
 # This file (will) host a high performance port scanner (soon, hopefully).
 
+from concurrent import futures
+from multiprocessing import Pool
+import socket
+import signal
+
+threadCount = 64
+procCount = 4
+connTimeout = 2.0
+
+# Thread pool for port scanner.
+threadPool = None
+
+def InitScannerProcess():
+    global threadPool
+    # Let the main process deal with cleanup.
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    threadPool = futures.ThreadPoolExecutor(max_workers=threadCount+1)
+
+def ScanPortsForProc(targets):
+    global threadPool
+    host, ports = targets
+    futureList = [threadPool.submit(ScanPort, (host, p)) for p in ports]
+    result = [f.result() for f in futureList]
+    return result
+
+def ScanPort(target):
+    try:
+        s = socket.create_connection(target, connTimeout)
+        s.close()
+    except Exception as e:
+        return False
+    return True
+
 class PortScanner:
     def __init__(self):
-        pass
+        self.procPool = Pool(procCount+1, InitScannerProcess)
+
+    def Shutdown(self):
+        self.procPool.close()
+        self.procPool.join()
+        self.procPool = None
 
     # ScanHostPorts scans the host's ports.
     # host is the IP address of the target.
@@ -35,8 +73,12 @@ class PortScanner:
     # [True, True, True, False]
     # If only 1111 is not reachable, and the rest are reachable.
     def ScanHostPorts(self, host, ports):
-        # TODO
-        # Lazy scanner pretends every port is not reachable!
-        return [False,]*len(ports)
-    
-        
+        mapList = []
+        while len(ports) != 0:
+            mapList.append((host, ports[:threadCount]))
+            ports = ports[threadCount:]
+        mapResult = self.procPool.map(ScanPortsForProc, mapList, 1)
+        results = []
+        for r in mapResult:
+            results += r
+        return results
