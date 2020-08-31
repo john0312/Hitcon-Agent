@@ -23,7 +23,9 @@
 import logging
 import base64
 import pydle
+
 from config import Config
+from kofserver_pb2 import ErrorCode as KOFErrorCode
 
 class IRC(pydle.Client):
     async def on_connect(self):
@@ -31,27 +33,46 @@ class IRC(pydle.Client):
         logging.info("Bot Join %s" % (self.channel))
 
     async def on_message(self, target, nick, message):
-        if nick == Config.conf()["admin"]:
+        if nick == self.nickname:
+            # Never respond to self.
+            return
+
+        reply = None
+        if self._IsAdmin(nick):
             if message.startswith("CreateGame ") == True:
-                self.CreateGame(message)
+                reply = self.CreateGame(message)
             elif message.startswith("StartGame ") == True:
                 self.StartGame(message)
             elif message.startswith("DestroyGame ") == True:
                 self.DestroyGame(message)
+            elif message.startswith("SetCurrentGame ") == True:
+                self.SetCurrentGame(message)
             else:
                 pass
+            if reply is not None:
+                await self.message(target, reply)
+        
+        if message.startswith("Scoreboard") == True:
+            replies = self.GetScoreBoard()
+            for r in replies:
+                await self.message(target, r)
+            return
+
+        # Admin can play too
+        if self.gameName == None or self.scenario == None:
+            return
+        if nick not in self.userSet:
+            self.PlayerRegister(self.gameName, nick)
+            self.userSet.add(nick)
+        if message.startswith("Cmd ") == True:
+            self.PlayerIssueCmd(self.gameName, nick, message)
+        elif message.startswith("Shellcode ") == True:
+            self.PlayerIssueSC(self.gameName, nick, message)
         else:
-            if self.gameName == None or self.scenario == None:
-                return
-            if nick not in self.userSet:
-                self.PlayerRegister(self.gameName, nick)
-                self.userSet.add(nick)
-            if message.startswith("Cmd ") == True:
-                self.PlayerIssueSC(self.gameName, nick, message)
-            elif message.startswith("Shellcode ") == True:
-                self.PlayerIssueSC(self.gameName, nick, message)
-            else:
-                pass
+            pass
+
+    def _IsAdmin(self, nick):
+        return nick == Config.conf()["admin"]
 
     def SetChannel(self, channel):
         self.channel = channel
@@ -64,14 +85,34 @@ class IRC(pydle.Client):
         self.gameName = None
         self.scenario = None
 
+    def SetCurrentGame(self, message):
+        message = message.split(" ")
+        if len(message) != 2:
+            errMsg = "SetCurrentGame format error!"
+            return errMsg
+        if self.gameName is not None:
+            errMsg = "Cant set current game if previous game is not destroyed"
+            return errMsg
+        self.gameName = message[1]
+        return None
+
     def CreateGame(self, message):
         message = message.split(" ")
         if len(message) != 3:
-            logging.error("CreateGame parameters format error!")
-            return
+            errMsg = "CreateGame parameters format error!"
+            return errMsg
+        if self.gameName is not None:
+            errMsg = "Previous game not destroyed properly!"
+            return errMsg
         self.gameName = message[1]
         self.scenario = message[2]
-        self.agent.CreateGame(self.gameName, self.scenario)
+        result = self.agent.CreateGame(self.gameName, self.scenario)
+        if result != KOFErrorCode.ERROR_NONE:
+            errMsg = "Game creation failed, error code %s"%(str(result),)
+        else:
+            errMsg = "Game created"
+        return errMsg
+        
     
     def StartGame(self, message):
         message = message.split(" ")
@@ -100,8 +141,27 @@ class IRC(pydle.Client):
         self.agent.PlayerIssueSC(gameName, nick, encodedMessage)
     
     def PlayerIssueCmd(self, gameName, nick, message):
-        message = message.split(" ")
-        if len(message) != 2:
-            logging.error("Cmd parameters format error!")
-            return
-        self.agent.PlayerIssueCmd(gameName, nick, message[1])
+        # Command could contain space.
+        idx = message.find(" ")
+        if idx == -1:
+            errMsg = "Cmd parameters format error!"
+            return errMsg
+        cmd = message[idx+1:]
+        result = self.agent.PlayerIssueCmd(gameName, nick, cmd)
+        if result.reply.error != KOFErrorCode.ERROR_NONE:
+            errMsg = "Run command failed, error code %s"%(str(result.reply.error),)
+        else:
+            # No message for success, for now.
+            errMsg = None
+        return errMsg
+
+    def GetScoreBoard(self):
+        result = self.agent.QueryScore("", "")
+        if result.reply.error != KOFErrorCode.ERROR_NONE:
+            return ["Failed to query score, error code %s"%(str(result.reply.error),),]
+        msg = []
+        for s in result.scores:
+            msg.append('%s\t%d'%(s.playerName, s.score))
+        return msg
+
+            

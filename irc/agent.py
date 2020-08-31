@@ -47,11 +47,8 @@ class Agent:
     def CreateGame(self, gameName, scenarioName):
         req = kofserver_pb2.CreateGameReq(gameName=gameName, scenarioName=scenarioName)
         reply = self.stub.CreateGame(req)
-        if reply.error == KOFErrorCode.ERROR_NONE:
-            print("Create game successful")
-        else:
-            print("Create game failed: %s"%(str(reply.error),))
-    
+        return reply.error
+
     def StartGame(self, gameName):
         req = kofserver_pb2.StartGameReq(gameName=gameName)
         reply = self.stub.StartGame(req)
@@ -87,9 +84,8 @@ class Agent:
     
     def PlayerIssueCmd(self, gameName, playerName, cmd):
         req = kofserver_pb2.PlayerIssueCmdReq(gameName=gameName, playerName=playerName, cmd=cmd)
-        reply = self.stub.PlayerIssueCmd(req)
-        if reply.reply.error == KOFErrorCode.ERROR_NONE:
-            print("Player Issue Command successful, result: ")
-            print(reply)
-        else:
-            print("Player Issue Command failed: %s"%(str(reply.reply.error),))
+        return self.stub.PlayerIssueCmd(req)
+
+    def QueryScore(self, gameName, playerName):
+        req = kofserver_pb2.QueryScoreReq(gameName=gameName, playerName=playerName)
+        return self.stub.QueryScore(req)
