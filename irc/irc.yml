@@ -1,0 +1,13 @@
+# Agent
+agentHost: "127.0.0.1"
+agentPort: 29110
+agentConnectTimeout: 3.0
+
+# IRC
+ircServer: "irc.geekshed.net"
+channel: "#test"
+botNickName: "hitconBot"
+ircPort: 6667
+ircSSLPort: 6697
+bufferSize: 4096
+admin: "Admin"

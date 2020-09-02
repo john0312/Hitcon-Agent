@@ -19,17 +19,28 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-all: guest_agent_pb2.py kofserver
+import logging
+from irc import IRC
+from agent import Agent
+from config import Config
 
-guest_agent_pb2.py: guest_agent.proto
-	python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. guest_agent.proto
+# TODO: Enhance performance
+def main():
+    # Setup logging
+    logging.basicConfig(level=logging.INFO)
 
-kofserver: FORCE
-	$(MAKE) -C $@
+    # Initialize the config.
+    Config.Init()
 
-clean:
-	rm -f guest_agent_pb2.py guest_agent_pb2_grpc.py
-	make -C kofserver clean
+    # Initialize agent
+    agent = Agent()   
 
-# Force target so we can force subdirectory make.
-FORCE:
+    # Initialize IRC
+    irc = IRC(nickname=Config.conf()['botNickName'])
+    irc.SetChannel(Config.conf()['channel'])
+    irc.ResetGame()
+    irc.SetAgent(agent)
+    irc.run(hostname=Config.conf()['ircServer'], port=Config.conf()['ircSSLPort'], tls=True, tls_verify=True)
+
+if __name__ == '__main__':
+    main()

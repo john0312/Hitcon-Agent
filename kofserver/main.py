@@ -19,17 +19,49 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-all: guest_agent_pb2.py kofserver
 
-guest_agent_pb2.py: guest_agent.proto
-	python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. guest_agent.proto
+# This file holds the main function for KOF Server.
 
-kofserver: FORCE
-	$(MAKE) -C $@
+import grpc
+import logging
+from concurrent import futures
 
-clean:
-	rm -f guest_agent_pb2.py guest_agent_pb2_grpc.py
-	make -C kofserver clean
+import kofserver_pb2, kofserver_pb2_grpc
+import kofserver
+import vm_manager
+from config import Config
 
-# Force target so we can force subdirectory make.
-FORCE:
+def main():
+    # Setup logging
+    logging.basicConfig(level=logging.INFO)
+
+    # Initialize the config.
+    Config.Init()
+    
+    # Create the VM Manager service.
+    vmManager = vm_manager.VMManager()
+
+    # Create the executor that we'll run the server from.
+    executor = futures.ThreadPoolExecutor(max_workers=4)
+    # Create the server adaptor instance.
+    kofservicer = kofserver.KOFServer(executor, vmManager)
+
+    # Start the KOF Server service
+    server = grpc.server(executor)
+    kofserver_pb2_grpc.add_KOFServerServicer_to_server(kofservicer, server)
+    server.add_insecure_port('[::]:29110')
+    server.start()
+    try:
+        server.wait_for_termination()
+    except KeyboardInterrupt:
+        logging.warn("Ctrl-C Detected, shutting down.")
+
+    kofservicer.Shutdown()
+    executor.shutdown()
+
+if __name__ == '__main__':
+    main()
+
+    
+
+
