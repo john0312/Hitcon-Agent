@@ -26,6 +26,7 @@ Example usage
 $ python3 guest_agent_client.py --host=127.0.0.1 --port=29120 --action=ping
 $ python3 guest_agent_client.py --host=127.0.0.1 --port=29120 --action=runcmd '--cmd=echo HelloWorld'
 $ python3 guest_agent_client.py --action=queryprocinfo
+$ python3 guest_agent_client.py --action=procevent
 """
 
 import logging
@@ -45,7 +46,7 @@ def main():
     parser.add_argument('--port', type=int, default=29120, help='The port to connect to')
 
     # Commands 
-    parser.add_argument('--action', type=str, choices=['ping', 'runcmd', 'runsc', 'queryprocinfo'], help='Action to carry out.')
+    parser.add_argument('--action', type=str, choices=['ping', 'runcmd', 'runsc', 'queryprocinfo', 'procevent'], help='Action to carry out.')
     parser.add_argument('--cmd', type=str, default='echo HelloWorld')
     parser.add_argument('--shellcode', type=str, default='6xO4AQAAAL8BAAAAXroPAAAADwXD6Oj///9IZWxsbywgV29ybGQhCgo=')
     
@@ -95,6 +96,11 @@ def main():
                 print(response.info)
             else:
                 print("Query process info failed: %s"%(str(response.reply.error),))
+
+        if args.action == 'procevent':
+            stream = stub.ProcessEventListener(guest_agent_pb2.ProcessEventListenerReq())
+            for evt in stream:
+                print("Event: %s"%(str(evt),))
 
 if __name__ == "__main__":
     main()

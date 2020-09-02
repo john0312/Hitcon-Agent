@@ -19,42 +19,35 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# This file holds the main function for the guest/qemu agent.
+import yaml
 
-import grpc
-import logging
-from concurrent import futures
+# For the real configuration file, see kofserver.yml
 
-import guest_agent_pb2, guest_agent_pb2_grpc
-import guest_agent
-from proc_watcher import ProcWatcher
-from config import Config
+# Config is a singleton class that stores the KOFServer configurations.
+# It is in charge of loading config from kofserver.yml and
+# allowing other code to access the config.
+# Simply do Config.conf() to get configurations.
+class Config:
+  __instance = None
 
-def main():
-    # Setup logging and config
-    logging.basicConfig(level=logging.INFO)
-    Config.Init()
+  @staticmethod
+  def Init():
+      # Create the config class and load the configs.
+      # Should only be called once at startup.
+      Config()
 
-    # Create the executor that we'll run the server from.
-    executor = futures.ThreadPoolExecutor(max_workers=8)
+  @staticmethod
+  def conf():
+      if Config.__instance == None:
+          raise Exception("Config not initialized")
+      return Config.__instance.conf
 
-    # Create the server adaptor instance.
-    procWatcher = ProcWatcher(executor)
-    servicer = guest_agent.GuestAgent(procWatcher)
-
-    # Start the Guest Agent server
-    server = grpc.server(executor)
-    guest_agent_pb2_grpc.add_GuestAgentServicer_to_server(servicer, server)
-    server.add_insecure_port('[::]:29120')
-    server.start()
-    
-    try:
-        server.wait_for_termination()
-    except KeyboardInterrupt:
-        logging.warn("Ctrl-C Detected, shutting down.")
-
-    procWatcher.Shutdown()
-    executor.shutdown()
-
-if __name__ == "__main__":
-    main()
+  def __init__(self):
+      if Config.__instance != None:
+          raise Exception("Multiple Config instanciation")
+      else:
+          Config.__instance = self
+      
+      # Now load the config.
+      with open('./guest_agent.yml') as f:
+          self.conf = yaml.load(f, Loader=yaml.FullLoader)

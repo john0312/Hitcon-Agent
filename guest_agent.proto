@@ -98,6 +98,25 @@ message QueryProcInfoRep {
   repeated ProcInfo info = 2;
 }
 
+message ProcessEventListenerReq {
+  // No argument required to listen for event.
+}
+
+enum ProcEventType {
+  PROC_NA = 0; // Unused
+  PROC_CREATE = 1;
+  PROC_TERMINATE = 2;
+}
+
+// One of these represents an information about the event.
+message ProcEvent {
+    // What happened to the event?
+    ProcEventType eventType = 1;
+
+    // Details on the event?
+    ProcInfo info = 2;
+}
+    
 service GuestAgent {
   // Ping is used to check if the agent is doing well.
   rpc Ping(PingReq) returns (Rep) {}
@@ -114,4 +133,7 @@ service GuestAgent {
 
   // Query all process information.
   rpc QueryProcInfo(QueryProcInfoReq) returns (QueryProcInfoRep) {}
+
+  // Listen for process event, will stream one ProcEvent on every process creation/termination.
+  rpc ProcessEventListener(ProcessEventListenerReq) returns (stream ProcEvent) {}
 }
