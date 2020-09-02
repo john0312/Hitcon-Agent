@@ -84,7 +84,9 @@ class VM():
             raise Exception("VM.Init() called in invalid state %s"%(str(self.state)))
 
         logging.info("Initializing VM based on %s"%(self.vmPath,))
-        if self._GetType() == 'shellscript':
+        if self._GetType() == 'noop':
+            pass
+        elif self._GetType() == 'shellscript':
             if not self._RunScript(self.vmConf['shellscript']['init'], []):
                 raise Exception("Failed to run shellscript for Init()")
         else:
@@ -98,7 +100,9 @@ class VM():
             raise Exception("VM.Boot() called in invalid state %s"%(str(self.state)))
 
         logging.info("Booting VM based on %s"%(self.vmPath,))
-        if self._GetType() == 'shellscript':
+        if self._GetType() == 'noop':
+            pass
+        elif self._GetType() == 'shellscript':
             if not self._RunScript(self.vmConf['shellscript']['boot'], []):
                 raise Exception("Failed to run shellscript for Boot()")
         else:
@@ -116,7 +120,9 @@ class VM():
             raise Exception("VM.Shutdown() called in invalid state %s"%(str(self.state)))
 
         logging.info("Shutting down VM based on %s"%(self.vmPath,))
-        if self._GetType() == 'shellscript':
+        if self._GetType() == 'noop':
+            pass
+        elif self._GetType() == 'shellscript':
             if not self._RunScript(self.vmConf['shellscript']['shutdown'], []):
                 raise Exception("Failed to run shellscript for Shutdown()")
         else:
@@ -130,7 +136,9 @@ class VM():
             raise Exception("VM.Destroy() called in invalid state %s"%(str(self.state)))
 
         logging.info("Destroying VM based on %s"%(self.vmPath,))
-        if self._GetType() == 'shellscript':
+        if self._GetType() == 'noop':
+            pass
+        elif self._GetType() == 'shellscript':
             if not self._RunScript(self.vmConf['shellscript']['destroy'], []):
                 raise Exception("Failed to run shellscript for Destroy()")
         else:
