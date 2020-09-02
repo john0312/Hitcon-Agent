@@ -19,7 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-all: guest_agent kofserver
+all: guest_agent kofserver irc
 
 guest_agent: FORCE
 	$(MAKE) -C $@
@@ -27,7 +27,11 @@ guest_agent: FORCE
 kofserver: FORCE
 	$(MAKE) -C $@
 
+irc: FORCE
+	$(MAKE) -C $@
+
 clean:
+	make -C irc clean
 	make -C guest_agent clean
 	make -C kofserver clean
 
