@@ -19,32 +19,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# This file holds the main function for the guest/qemu agent.
+all: guest_agent_pb2.py
 
-import grpc
-import logging
-from concurrent import futures
+guest_agent_pb2.py: guest_agent.proto
+	python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. guest_agent.proto
 
-import guest_agent_pb2, guest_agent_pb2_grpc
-import guest_agent
-
-def main():
-    # Setup logging
-    logging.basicConfig(level=logging.INFO)
-
-    # Create the executor that we'll run the server from.
-    executor = futures.ThreadPoolExecutor(max_workers=8)
-    # Create the server adaptor instance.
-    servicer = guest_agent.GuestAgent()
-
-    # Start the Guest Agent server
-    server = grpc.server(executor)
-    guest_agent_pb2_grpc.add_GuestAgentServicer_to_server(servicer, server)
-    server.add_insecure_port('[::]:29120')
-    server.start()
-    server.wait_for_termination()
-
-    executor.shutdown()
-
-if __name__ == "__main__":
-    main()
+clean:
+	rm -f guest_agent_pb2.py guest_agent_pb2_grpc.py

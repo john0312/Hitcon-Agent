@@ -26,12 +26,15 @@ Example usage
 $ python3 guest_agent_client.py --host=127.0.0.1 --port=29120 --action=ping
 $ python3 guest_agent_client.py --host=127.0.0.1 --port=29120 --action=runcmd '--cmd=echo HelloWorld'
 $ python3 guest_agent_client.py --action=queryprocinfo
+$ python3 guest_agent_client.py --action=procevent --timeout=5.0
 """
 
 import logging
 import os
 import argparse
 import grpc
+import time
+from concurrent import futures
 
 import guest_agent_pb2, guest_agent_pb2_grpc
 
@@ -45,15 +48,17 @@ def main():
     parser.add_argument('--port', type=int, default=29120, help='The port to connect to')
 
     # Commands 
-    parser.add_argument('--action', type=str, choices=['ping', 'runcmd', 'runsc', 'queryprocinfo'], help='Action to carry out.')
+    parser.add_argument('--action', type=str, choices=['ping', 'runcmd', 'runsc', 'queryprocinfo', 'procevent'], help='Action to carry out.')
     parser.add_argument('--cmd', type=str, default='echo HelloWorld')
     parser.add_argument('--shellcode', type=str, default='6xO4AQAAAL8BAAAAXroPAAAADwXD6Oj///9IZWxsbywgV29ybGQhCgo=')
+    parser.add_argument('--timeout', type=float, default=-1.0, help='Timeout for procevent')
     
     """
     --action=ping // No other arguments required.
     --action=runcmd --cmd=<CMD>
     --action=runsc --shellcode=<b64shellcode>
     --action=queryprocinfo
+    --action=procevent [--timeout=<timeout>]
     """
 
     args = parser.parse_args()
@@ -95,6 +100,21 @@ def main():
                 print(response.info)
             else:
                 print("Query process info failed: %s"%(str(response.reply.error),))
+
+        if args.action == 'procevent':
+            executor = futures.ThreadPoolExecutor(max_workers=8)
+            stream = stub.ProcessEventListener(guest_agent_pb2.ProcessEventListenerReq())
+            def killstream(s):
+                time.sleep(args.timeout)
+                stream.cancel()
+            if args.timeout > 0.0:
+                executor.submit(killstream, stream)
+            try:
+                for evt in stream:
+                    print("Event: %s"%(str(evt),))
+            except Exception:
+                logging.exception("Done listening for event")
+            executor.shutdown()
 
 if __name__ == "__main__":
     main()

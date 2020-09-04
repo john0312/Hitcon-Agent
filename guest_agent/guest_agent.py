@@ -27,13 +27,14 @@ import os
 import subprocess
 import random
 import psutil
+import queue
 
 from shellexec import child_task
 import guest_agent_pb2, guest_agent_pb2_grpc
 
 class GuestAgent(guest_agent_pb2_grpc.GuestAgentServicer):
-    def __init__(self):
-        pass
+    def __init__(self, procWatcher):
+        self.procWatcher = procWatcher
 
     def Ping(self, request, context):
         # Ping always succeed.
@@ -91,3 +92,15 @@ class GuestAgent(guest_agent_pb2_grpc.GuestAgentServicer):
         for r in result:
             reply.info.append(r)
         return reply
+
+    def ProcessEventListener(self, request, context):
+        logging.info("ProcessEventListener started")
+        q = queue.Queue(32)
+        self.procWatcher.RegisterQueue(q)
+        try:
+            while True:
+                event = q.get()
+                yield event
+        except:
+            logging.exception("ProcessEventListener ended")
+        self.procWatcher.UnregisterQueue(q)

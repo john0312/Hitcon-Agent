@@ -19,21 +19,35 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-all: guest_agent kofserver irc
+import yaml
 
-guest_agent: FORCE
-	$(MAKE) -C $@
+# For the real configuration file, see kofserver.yml
 
-kofserver: FORCE
-	$(MAKE) -C $@
+# Config is a singleton class that stores the KOFServer configurations.
+# It is in charge of loading config from kofserver.yml and
+# allowing other code to access the config.
+# Simply do Config.conf() to get configurations.
+class Config:
+  __instance = None
 
-irc: FORCE
-	$(MAKE) -C $@
+  @staticmethod
+  def Init():
+      # Create the config class and load the configs.
+      # Should only be called once at startup.
+      Config()
 
-clean:
-	make -C irc clean
-	make -C guest_agent clean
-	make -C kofserver clean
+  @staticmethod
+  def conf():
+      if Config.__instance == None:
+          raise Exception("Config not initialized")
+      return Config.__instance.conf
 
-# Force target so we can force subdirectory make.
-FORCE:
+  def __init__(self):
+      if Config.__instance != None:
+          raise Exception("Multiple Config instanciation")
+      else:
+          Config.__instance = self
+      
+      # Now load the config.
+      with open('./guest_agent.yml') as f:
+          self.conf = yaml.load(f, Loader=yaml.FullLoader)

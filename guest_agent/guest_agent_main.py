@@ -19,21 +19,42 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-all: guest_agent kofserver irc
+# This file holds the main function for the guest/qemu agent.
 
-guest_agent: FORCE
-	$(MAKE) -C $@
+import grpc
+import logging
+from concurrent import futures
 
-kofserver: FORCE
-	$(MAKE) -C $@
+import guest_agent_pb2, guest_agent_pb2_grpc
+import guest_agent
+from proc_watcher import ProcWatcher
+from config import Config
 
-irc: FORCE
-	$(MAKE) -C $@
+def main():
+    # Setup logging and config
+    logging.basicConfig(level=logging.INFO)
+    Config.Init()
 
-clean:
-	make -C irc clean
-	make -C guest_agent clean
-	make -C kofserver clean
+    # Create the executor that we'll run the server from.
+    executor = futures.ThreadPoolExecutor(max_workers=8)
 
-# Force target so we can force subdirectory make.
-FORCE:
+    # Create the server adaptor instance.
+    procWatcher = ProcWatcher(executor)
+    servicer = guest_agent.GuestAgent(procWatcher)
+
+    # Start the Guest Agent server
+    server = grpc.server(executor)
+    guest_agent_pb2_grpc.add_GuestAgentServicer_to_server(servicer, server)
+    server.add_insecure_port('[::]:29120')
+    server.start()
+    
+    try:
+        server.wait_for_termination()
+    except KeyboardInterrupt:
+        logging.warn("Ctrl-C Detected, shutting down.")
+
+    procWatcher.Shutdown()
+    executor.shutdown()
+
+if __name__ == "__main__":
+    main()
