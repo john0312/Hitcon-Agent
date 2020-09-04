@@ -21,7 +21,7 @@
 
 all: kofserver_pb2.py
 
-kofserver_pb2.py: kofserver.proto
+kofserver_pb2.py: ../kofserver/kofserver.proto
 	python -m grpc_tools.protoc -I../kofserver --python_out=. --grpc_python_out=. kofserver.proto
 
 clean:
