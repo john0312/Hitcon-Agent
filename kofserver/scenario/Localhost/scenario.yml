@@ -1,0 +1,24 @@
+# Path to our VM configuration
+vmPath: "vm.yml"
+
+ip: "127.0.0.1"
+pidCheckInterval: 5.0
+portCheckInterval: 5.0
+
+portScorePerSec: 0.0
+pidScorePerSec: 1.0
+
+allowShellcode: True
+allowCommand: True
+
+# $vmPath/vm.yml
+# vmType: "shellscript"
+# $vmPath/init.sh <VM Name>
+# $vmPath/boot.sh <VM Name>
+# $vmPath/shutdown.sh <VM Name>
+# $vmPath/destroy.sh <VM Name>
+# $vmPath/checkState.sh <VM Name>
+
+# vmType: "libvirt"
+# domXML: "xxx.xml"
+# ...
