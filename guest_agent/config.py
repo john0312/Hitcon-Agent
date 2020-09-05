@@ -50,4 +50,4 @@ class Config:
       
       # Now load the config.
       with open('./guest_agent.yml') as f:
-          self.conf = yaml.load(f, Loader=yaml.FullLoader)
+          self.conf = yaml.load(f, Loader=yaml.SafeLoader)
