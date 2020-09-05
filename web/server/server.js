@@ -2,26 +2,25 @@ const app = require('express')();
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
 const { checkOrigin } = require('./util/middleWare');
+const ConfigManager = require('./config/ConfigManager');
+const Broadcast = require('./util/Broadcast');
+const Agent = require('./util/Agent');
+const Game = require('./service/Game');
 
 app.use(checkOrigin);
+// TODO: Remove clients 
 app.get('/clients', (req, res) => {
   res.send(Object.keys(io.sockets.clients().connected))
 })
 
-io.on('connection', socket => {
-  console.log(`A user connected with socket id ${socket.id}`)
+// Initialize Game
+let configManager = new ConfigManager();
+let broadcast = new Broadcast(io);
+let agent = new Agent(configManager);
+let game = new Game(configManager, broadcast);
+game.run("game1", agent);
 
-  socket.broadcast.emit('user-connected', socket.id)
-
-  socket.on('disconnect', () => {
-    socket.broadcast.emit('user-disconnected', socket.id)
-  })
-
-  socket.on('nudge-client', data => {
-    socket.broadcast.to(data.to).emit('client-nudged', data)
-  })
-})
-
-http.listen(5000, () => {
-  console.log('Listening on *:5000')
+const webServerPort = configManager.getConfig(['webServerPort']);
+http.listen(webServerPort, () => {
+  console.log(`Listening on *: ${webServerPort}`)
 })
