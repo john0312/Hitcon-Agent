@@ -71,10 +71,10 @@ class Scorer:
                 if self.game.state != GameState.GAME_RUNNING:
                     # Game no longer running we're checking.
                     logging.warn("Game shutdown (%s) while we are checking PID"%(str(self.game.state),))
-                    return False
                 else:
                     # Game's still running but check failed, that's a problem.
-                    raise
+                    logging.exception("Game still running but checking pid failed")
+                return False
             self.pidLastCheckTime += self.scenario['pidCheckInterval']
         
         if self.portLastCheckTime + self.scenario['portCheckInterval'] <= currentTime:
@@ -85,10 +85,10 @@ class Scorer:
                 if self.game.state != GameState.GAME_RUNNING:
                     # Game no longer running we're checking.
                     logging.warn("Game shutdown (%s) while we are checking port"%(str(self.game.state),))
-                    return False
                 else:
                     # Game's still running but check failed, that's a problem.
-                    raise
+                    logging.exception("Game still running but checking port failed")
+                return False
             self.portLastCheckTime += self.scenario['portCheckInterval']
     
         # Generate the tick

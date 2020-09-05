@@ -167,7 +167,7 @@ class Game:
                     # Wait some time?
                     time.sleep(0.5)
                 
-            if self.state == GameState.GAME_STARTING2:
+            if self.state == GameState.GAME_STARTING2 or self.state == GameState.GAME_REBOOTING2:
                 # Wait for the guest agent to be connected.
                 if self.agent.EnsureConnection():
                     # It's connected, so we can move onto the started state
@@ -183,12 +183,36 @@ class Game:
             if self.state == GameState.GAME_RUNNING:
                 playerScored = self.scorer.TryScorePlayers()
                 if not playerScored:
-                    # Don't stress it too much.
+                    # Maybe it's disconnected?
+                    if not self.agent.CheckAlive():
+                        # It's down.
+                        if self.state == GameState.GAME_RUNNING:
+                            logging.error("Game rebooting due to dead agent")
+                            self.state = GameState.GAME_REBOOTING1
+                        else:
+                            logging.error("Game agent dead but game state = %s"%(str(self.state),))
+                        continue
+                    # Don't stress it too much otherwise.
                     time.sleep(0.3)
             
-            if self.state == GameState.GAME_REBOOTING:
-                raise Exception("Reboot state not implemented yet")
-                # TODO
+            if self.state == GameState.GAME_REBOOTING1:
+                if self.vm.GetState() == VM.VMState.RUNNING:
+                    # VM is running, shut it down.
+                    res = self.vm.Shutdown()
+                    if not res or self.vm.GetState() != VM.VMState.READY:
+                        logging.error("Failed to shutdown VM (%s) or invalid VM state after Shutdown() (%s) during reboot"%(str(res), str(self.vm.GetState())))
+                        self.state = GameState.GAME_ERROR
+                    continue
+                
+                if self.vm.GetState() == VM.VMState.READY:
+                    # VM is down, restart it and put it into the new state.
+                    res = self.vm.Boot()
+                    if not res or self.vm.GetState() != VM.VMState.RUNNING:
+                        logging.error("Failed to boot VM during reboot.")
+                        self.state = GameState.GAME_ERROR
+                    else:
+                        self.state = GameState.GAME_REBOOTING2
+                    continue
             
             if self.state == GameState.GAME_DESTROYING:
                 # Shutdown the VM and reset the guest agent.
