@@ -42,7 +42,16 @@ function repeatEvent(call) {
   function sender(name) {
     return (callback) => {
       call.write({
-        message: 'Event! ' + name
+        eventType: 0,
+        info: {
+          "pid": 20,
+          "name": name,
+          "cmdline": "da",
+          "cpu_time": 2.0,
+          "memory_usage": 50
+        },
+        playerName: "jim",
+        gainReason: 0
       });
       _.delay(callback, 1000); // in ms
     };
@@ -71,7 +80,7 @@ function queryScore(call, callback) {
 function getServer() {
   let server = new grpc.Server();
   server.addService(kofserver.KOFServer.service, {
-    event: repeatEvent,
+    gameEventListener: repeatEvent,
     queryScore: queryScore
   });
   return server;
