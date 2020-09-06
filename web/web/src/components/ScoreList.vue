@@ -36,6 +36,8 @@ SOFTWARE. -->
       :headers="headers"
       :items="desserts"
       :search="search"
+      :rows-per-page-items="[15, 30, 50, 100]"
+      :pagination.sync="pagination"
     >
       <template v-slot:items="props">
         <td>{{ props.item.playerName }}</td>
@@ -52,6 +54,11 @@ export default {
   data() {
     return {
       search: '',
+      pagination: {
+        sortBy: 'score',
+        descending: true,
+        rowsPerPage: 15,
+      },
       headers: [
         {
           text: 'Player Name',
