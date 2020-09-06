@@ -20,18 +20,31 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. -->
 
 <template>
-  <v-app id="app">
-    <EventNotification />
-    <router-view />
-  </v-app>
+  <v-snackbar
+    :timeout="3000"
+    bottom
+    v-model="snackbar.visible"
+  >
+    {{ snackbar.text }}
+  </v-snackbar>
 </template>
 
 <script>
-import EventNotification from '@/components/EventNotification'
-
 export default {
-  components: {
-    EventNotification,
+  data() {
+    return {
+      snackbar: {
+        visible: false,
+        text: '',
+      },
+    }
+  },
+
+  mounted() {
+    this.$socket.on('event', data => {
+      this.snackbar.text = `${data}`
+      this.snackbar.visible = true
+    })
   },
 }
 </script>
