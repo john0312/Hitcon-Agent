@@ -21,19 +21,51 @@
  * SOFTWARE.
  */
 
-import Vue from 'vue'
-import Router from 'vue-router'
-import Home from '@/components/Home'
+import api from '../../api'
+import * as mutation from '../mutation-types'
 
-Vue.use(Router)
+const state = {
+  scoreList: [],
+  loading: false,
+}
 
-export default new Router({
-  mode: 'history',
-  routes: [
-    {
-      path: '/',
-      name: 'home',
-      component: Home,
-    },
-  ],
-})
+const getters = {
+  scoreList: (state) => state.scoreList,
+}
+
+const mutations = {
+  [mutation.SET_SCORE_LIST](state, payload) {
+    state.scoreList = payload
+  },
+  [mutation.IS_LOADING_SCORE_LIST](state, payload) {
+    state.loading = payload
+  },
+}
+
+const actions = {
+  getScoreList: ({ commit }) => new Promise((resolve, reject) => {
+    const onSuccess = (response) => {
+      commit(mutation.SET_SCORE_LIST, response.body)
+      commit(mutation.IS_LOADING_SCORE_LIST, false)
+
+      resolve(response)
+    }
+
+    const onError = (error) => {
+      commit(mutation.SET_SCORE_LIST, [])
+      commit(mutation.IS_LOADING_SCORE_LIST, false)
+      reject(error)
+    }
+
+    commit(mutation.IS_LOADING_SCORE_LIST, true)
+
+    api.getScoreList().then(onSuccess).catch(onError)
+  }),
+}
+
+export default {
+  state,
+  actions,
+  getters,
+  mutations,
+}

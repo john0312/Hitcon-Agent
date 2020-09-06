@@ -20,18 +20,59 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. -->
 
 <template>
-  <v-app id="app">
-    <EventNotification />
-    <router-view />
-  </v-app>
+  <v-card>
+    <v-card-title>
+      <h1>Ranking List</h1>
+      <v-spacer></v-spacer>
+      <v-text-field
+        v-model="search"
+        append-icon="search"
+        label="Search"
+        single-line
+        hide-details
+      ></v-text-field>
+    </v-card-title>
+    <v-data-table
+      :headers="headers"
+      :items="desserts"
+      :search="search"
+    >
+      <template v-slot:items="props">
+        <td>{{ props.item.playerName }}</td>
+        <td>{{ props.item.pidUptime }}</td>
+        <td>{{ props.item.portUptime }}</td>
+        <td>{{ props.item.score }}</td>
+      </template>
+    </v-data-table>
+  </v-card>
 </template>
 
 <script>
-import EventNotification from '@/components/EventNotification'
-
 export default {
-  components: {
-    EventNotification,
+  data() {
+    return {
+      search: '',
+      headers: [
+        {
+          text: 'Player Name',
+          align: 'left',
+          sortable: false,
+          value: 'playerName',
+        },
+        { text: 'Pid Up Time', value: 'pidUptime' },
+        { text: 'Port Up Time', value: 'portUptime' },
+        { text: 'Score', value: 'score' },
+      ],
+      desserts: [],
+    }
+  },
+  mounted() {
+    this.$socket.on('scoreList', data => {
+      let d = JSON.parse(data)
+      if (d.reply.error === 'ERROR_NONE') {
+        this.desserts = d.scores
+      }
+    })
   },
 }
 </script>
