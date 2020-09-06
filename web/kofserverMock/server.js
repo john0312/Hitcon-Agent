@@ -42,7 +42,7 @@ function repeatEvent(call) {
   function sender(name) {
     return (callback) => {
       call.write({
-        eventType: 0,
+        eventType: Math.floor(Math.random() * 6) + 1,
         info: {
           "pid": 20,
           "name": name,
@@ -51,7 +51,7 @@ function repeatEvent(call) {
           "memory_usage": 50
         },
         playerName: "jim",
-        gainReason: 0
+        gainReason: Math.floor(Math.random() * 2) + 1
       });
       _.delay(callback, 1000); // in ms
     };
