@@ -30,3 +30,15 @@ $ npm install
 # Serve on localhost:5000
 $ node server.js
 ```
+
+## KofServer
+
+```bash
+$ cd kofserverMock
+
+# Install dependencies
+$ npm install
+
+# Serve on localhost:9090
+$ node server.js
+```
