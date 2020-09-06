@@ -42,7 +42,7 @@ export default {
 
   mounted() {
     this.$socket.on('event', data => {
-      this.snackbar.text = `${data}`
+      this.snackbar.text = `${data.replace(/"/g, '')}`
       this.snackbar.visible = true
     })
   },

@@ -11,9 +11,10 @@
     "lint": "eslint --fix"
   },
   "dependencies": {
-    "express": "^4.17.1",
-    "node-grpc-client": "^1.4.0",
-    "socket.io": "2.0.4"
+    "express": "4.17.1",
+    "node-grpc-client": "1.4.0",
+    "socket.io": "2.0.4",
+    "sprintf-js": "1.1.2"
   },
   "devDependencies": {
     "eslint": "^7.8.1",
