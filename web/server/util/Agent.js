@@ -105,6 +105,8 @@ module.exports = class Agent {
 function composeMessage(message, data) {
     let lang = message.mode;
     let eventType = data.eventType;
+    if(eventType === protoEnum.GameEventType.GAME_NOT_FOUND) return '';
+
     let pid = data.info.pid;
     let cmdline = data.info.cmdline;
     let playerName = data.playerName;
