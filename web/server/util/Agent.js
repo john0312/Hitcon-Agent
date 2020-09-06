@@ -40,7 +40,7 @@ module.exports = class Agent {
     event(gameName, callback) {
         let req = {gameName: gameName,};
         try {
-            const stream = this.client.eventStream(req);
+            const stream = this.client.gameEventListenerStream(req);
             stream.on('data', (data) => {
                 console.log(data);
                 callback(data);

@@ -30,8 +30,8 @@ import * as io from 'socket.io-client'
 import VueSocketIO from 'vue-socket.io'
 
 import 'vuetify/dist/vuetify.min.css'
-import './../iconfont/material-icons.css'
 import '../static/main.css'
+import '../static/material-icons.css'
 
 Vue.config.productionTip = false
 
