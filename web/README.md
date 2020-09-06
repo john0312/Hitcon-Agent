@@ -1,9 +1,12 @@
 # Vue and Socket.io
 
-Demo app using Vue and Socket.io
+Use Vue, Express and Socket.io
 
-- Runs port `8081`
-- It communicates trough web sockets on port `8080`
+- Runs App on port `8081`
+- App communicates with Express server trough web sockets on port `8080`
+- Express server communicates with Kofserver trough grpc on port `9090`
+
+![image](https://github.com/PPPy290351/Hitcon-Agent/blob/web/web/architecture.png)
 
 # Running
 
