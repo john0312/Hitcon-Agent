@@ -15,7 +15,9 @@ $ cd web
 # Install dependencies
 $ npm install
 
+# Allow hosts
 $ vim build/webpack.dev.conf.js
+    ...
     module.exports = {
         //...
         devServer: {
@@ -28,7 +30,15 @@ $ vim build/webpack.dev.conf.js
             ]
         }
     };
-# Serve with hot reload at localhost:8081
+    ...
+
+# Modify socket.io server host 
+$ vim src/main.js
+    ...
+    const socketServer = 'host::port'
+    ...
+
+# Serve with hot reload at host:8081
 $ npm run dev
 ```
 
@@ -40,7 +50,7 @@ $ cd server
 # Install dependencies
 $ npm install
 
-# Serve on localhost:8080
+# Serve on host:8080
 $ node server.js
 ```
 
@@ -52,6 +62,6 @@ $ cd kofserverMock
 # Install dependencies
 $ npm install
 
-# Serve on localhost:9090
+# Serve on host:9090
 $ node server.js
 ```

@@ -41,6 +41,7 @@ let configManager = new ConfigManager();
 let broadcast = new Broadcast(io);
 let agent = new Agent(configManager);
 let game = new Game(configManager, broadcast);
+// TODO: Support multiple games
 game.run("game1", agent);
 
 const webServerPort = configManager.getConfig(['webServerPort']);
