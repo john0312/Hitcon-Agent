@@ -1,0 +1,8 @@
+{
+  "webServerPort": 5000,
+  "protoPath": "../../../kofserver/kofserver.proto",
+  "kofServer": "0.0.0.0:9090",
+  "packageService": "kofserver", 
+  "theService": "KOFServer",
+  "queryScoreIntervalMillisecond": 3000
+}
