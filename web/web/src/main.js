@@ -33,10 +33,12 @@ import 'vuetify/dist/vuetify.min.css'
 import '../static/main.css'
 import '../static/material-icons.css'
 
+const socketServer = 'http://localhost:8080'
+
 Vue.config.productionTip = false
 
 Vue.use(Vuetify)
-Vue.use(VueSocketIO, io('http://localhost:5000'), store)
+Vue.use(VueSocketIO, io(socketServer), store)
 
 /* eslint-disable no-new */
 new Vue({
