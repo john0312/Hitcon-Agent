@@ -4,9 +4,9 @@ agentPort: 29110
 agentConnectTimeout: 3.0
 
 # IRC
-ircServer: "irc.geekshed.net"
-channel: "#hitcon2020mpgtest"
-botNickName: "hitcon2020mpgbot"
+ircServer: "10.8.66.208"
+channel: "#hitcon2020mpgtest2"
+botNickName: "hitcon2020mpgbot2"
 ircPort: 6667
 ircSSLPort: 6697
 bufferSize: 4096

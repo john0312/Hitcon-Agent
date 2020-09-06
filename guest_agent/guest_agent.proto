@@ -23,14 +23,7 @@ syntax = "proto3";
 
 package guestagent;
 
-// ProcInfo holds the information regarding a process
-message ProcInfo {
-  int32 pid = 1;
-  string name = 2;
-  string cmdline = 3;
-  double cpu_time = 4; // User+System CPU time in seconds
-  int64 memory_usage = 5; // RSS of the process
-}
+import "kofserver.proto";
 
 // ================== API Messages ==================
 
@@ -95,26 +88,11 @@ message QueryProcInfoRep {
   Rep reply = 1;
 
   // Information for all processes.
-  repeated ProcInfo info = 2;
+  repeated kofserver.ProcInfo info = 2;
 }
 
-message ProcessEventListenerReq {
+message EventListenerReq {
   // No argument required to listen for event.
-}
-
-enum ProcEventType {
-  PROC_NA = 0; // Unused
-  PROC_CREATE = 1;
-  PROC_TERMINATE = 2;
-}
-
-// One of these represents an information about the event.
-message ProcEvent {
-    // What happened to the event?
-    ProcEventType eventType = 1;
-
-    // Details on the event?
-    ProcInfo info = 2;
 }
     
 service GuestAgent {
@@ -135,5 +113,5 @@ service GuestAgent {
   rpc QueryProcInfo(QueryProcInfoReq) returns (QueryProcInfoRep) {}
 
   // Listen for process event, will stream one ProcEvent on every process creation/termination.
-  rpc ProcessEventListener(ProcessEventListenerReq) returns (stream ProcEvent) {}
+  rpc EventListener(EventListenerReq) returns (stream kofserver.GameEvent) {}
 }

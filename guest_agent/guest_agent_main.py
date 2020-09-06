@@ -28,6 +28,7 @@ from concurrent import futures
 import guest_agent_pb2, guest_agent_pb2_grpc
 import guest_agent
 from proc_watcher import ProcWatcher
+from proc_runner import ProcRunner
 from config import Config
 
 def main():
@@ -40,7 +41,8 @@ def main():
 
     # Create the server adaptor instance.
     procWatcher = ProcWatcher(executor)
-    servicer = guest_agent.GuestAgent(procWatcher)
+    procRunner = ProcRunner(executor)
+    servicer = guest_agent.GuestAgent(procWatcher, procRunner, executor)
 
     # Start the Guest Agent server
     server = grpc.server(executor)
@@ -52,7 +54,9 @@ def main():
         server.wait_for_termination()
     except KeyboardInterrupt:
         logging.warn("Ctrl-C Detected, shutting down.")
+        server.stop(2.0)
 
+    procRunner.Shutdown()
     procWatcher.Shutdown()
     executor.shutdown()
 

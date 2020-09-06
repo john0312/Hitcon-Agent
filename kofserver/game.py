@@ -27,6 +27,7 @@ import os
 import random
 import traceback
 import time
+import threading
 
 import kofserver_pb2, kofserver_pb2_grpc
 from kofserver_pb2 import GameState
@@ -76,8 +77,36 @@ class Game:
         # Create the scorer for scoring the users.
         self.scorer = Scorer(self)
     
+        # Initialize event callbacks
+        # Callback inserted by kofserver into this class.
+        # Used by this class to notify kofserver API users.
+        self.eventCallbackSet = set()
+        self.eventCallbackSetLock = threading.Lock()
+        # Callback inserted into guest agent and called by guest agent.
+        self.eventCallback = lambda x: self.EmitGameEvents([x,])
+        self.agent.AddCallback(self.eventCallback)
+
     def __del__(self):
         self.StopGameFunc()
+
+    def AddEventCallback(self, cb):
+        with self.eventCallbackSetLock:
+            if self.state == GameState.GAME_DESTROYING or self.state == GameState.GAME_DESTROYED:
+                cb(None)
+            else:
+                self.eventCallbackSet.add(cb)
+    
+    
+    def RemoveEventCallback(self, cb):
+        with self.eventCallbackSetLock:
+            self.eventCallbackSet.remove(cb)
+
+    def EmitGameEvents(self, evts):
+        # TODO: Event filtering?
+        with self.eventCallbackSetLock:
+            for cb in self.eventCallbackSet:
+                for evt in evts:
+                    cb(evt)
 
     # Start the game.
     def Start(self):
@@ -231,13 +260,11 @@ class Game:
                         logging.error("Failed to destroy VM")
                         self.state = GameState.GAME_ERROR
                         continue
+                    # VM's cleaned up, let's get the event handlers off.
+                    with self.eventCallbackSetLock:
+                        for cb in self.eventCallbackSet:
+                            cb(None)
                     self.state = GameState.GAME_DESTROYED
-                
-                # Wait for the VM to get to shutdown state.
-                if self.vm.GetState() == VM.VMState.DESTROYED:
-                    # It's down, so let's 
-                    # TODO
-                    pass
                     
     
     def StopGameFunc(self):
@@ -288,6 +315,7 @@ class Game:
         if playerName not in self.users:
             raise Exception("Invalid player %s for GetPlayerInfoProto"%playerName)
         
+        udict = self.users[playerName]
         result = kofserver_pb2.PlayerInfo(playerName=playerName)
         result.port = udict["port"]
         result.pid = udict["pid"]

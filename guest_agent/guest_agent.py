@@ -31,31 +31,34 @@ import queue
 
 from shellexec import child_task
 import guest_agent_pb2, guest_agent_pb2_grpc
+import kofserver_pb2
 
 class GuestAgent(guest_agent_pb2_grpc.GuestAgentServicer):
-    def __init__(self, procWatcher):
+    def __init__(self, procWatcher, procRunner, executor):
         self.procWatcher = procWatcher
+        self.executor = executor
+        self.procRunner = procRunner
 
     def Ping(self, request, context):
         # Ping always succeed.
-        logging.info("Ping received")
+        logging.debug("Ping received")
         return guest_agent_pb2.Rep(error=guest_agent_pb2.ErrorCode.ERROR_NONE)
     
     def RunCmd(self, request, context):
         cmd = request.cmd
-        logging.info("RunCmd called with %s"%cmd)
+        logging.info("RunCmd called with '%s'"%cmd)
         # TODO: Set various limits? Memory limit? CPU limit?
         try:
-            process = subprocess.Popen([cmd], shell=True)
+            result = self.procRunner.RunCmd([cmd,])
         except Exception:
-            logging.exception("Failed to RunCmd")
+            logging.exception("Failed to RunCmd(%s)"%(cmd,))
             errorCode = guest_agent_pb2.Rep(error=guest_agent_pb2.ErrorCode.ERROR_RUN_CMD_FAILED)
             return guest_agent_pb2.RunCmdRep(reply=errorCode)
         
         # Run command is successful, the command is probably running,
         # let's return the PID.
         genericReply = guest_agent_pb2.Rep(error=guest_agent_pb2.ErrorCode.ERROR_NONE)
-        reply = guest_agent_pb2.RunCmdRep(reply=genericReply, pid=process.pid)
+        reply = guest_agent_pb2.RunCmdRep(reply=genericReply, pid=result.pid)
         return reply
 
     def RunSC(self, request, context):
@@ -80,8 +83,11 @@ class GuestAgent(guest_agent_pb2_grpc.GuestAgentServicer):
 
     def QueryProcInfo(self, request, context):
         result = []
-        for proc in psutil.process_iter(["name", "cmdline", "cpu_times", "memory_info"]):
-            pinfo = guest_agent_pb2.ProcInfo(pid=proc.pid)
+        for proc in psutil.process_iter(["name", "cmdline", "cpu_times", "memory_info", "status"]):
+            pstatus = proc.info['status']
+            if pstatus == psutil.STATUS_ZOMBIE or pstatus == psutil.STATUS_DEAD:
+                continue
+            pinfo = kofserver_pb2.ProcInfo(pid=proc.pid)
             pinfo.name = proc.info['name']
             pinfo.cmdline = ' '.join(proc.info['cmdline'])
             pinfo.cpu_time = proc.info['cpu_times'].user + proc.info['cpu_times'].system
@@ -93,8 +99,8 @@ class GuestAgent(guest_agent_pb2_grpc.GuestAgentServicer):
             reply.info.append(r)
         return reply
 
-    def ProcessEventListener(self, request, context):
-        logging.info("ProcessEventListener started")
+    def EventListener(self, request, context):
+        logging.info("EventListener started")
         q = queue.Queue(32)
         self.procWatcher.RegisterQueue(q)
         try:
@@ -102,5 +108,5 @@ class GuestAgent(guest_agent_pb2_grpc.GuestAgentServicer):
                 event = q.get()
                 yield event
         except:
-            logging.exception("ProcessEventListener ended")
+            logging.exception("EventListener ended")
         self.procWatcher.UnregisterQueue(q)

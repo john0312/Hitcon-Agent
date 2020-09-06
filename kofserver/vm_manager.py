@@ -27,6 +27,7 @@ import logging
 import subprocess
 import os
 import yaml
+import time
 import uuid
 
 from config import Config
@@ -54,6 +55,9 @@ class VM():
         self.vmID = str(uuid.uuid4())
         # Load the VM YML
         self.vmConf = VM.LoadVM(self.vmPath)
+        
+        # This is the time at which VM is started. It'll be None if VM is not running.
+        self.vmStartupTime = None
     
     def _GetType(self):
         return self.vmConf['vmType']
@@ -109,6 +113,7 @@ class VM():
             raise Exception("Unknown vmType %s, not sure how to Boot()"%(self._GetType(),))
 
         self.state = VM.VMState.RUNNING
+        self.vmStartupTime = time.time()
         return True
 
     def CheckState(self):
@@ -129,6 +134,7 @@ class VM():
             raise Exception("Unknown vmType %s, not sure how to Shutdown()"%(self._GetType(),))
 
         self.state = VM.VMState.READY
+        self.vmStartupTime = None
         return True
 
     def Destroy(self):

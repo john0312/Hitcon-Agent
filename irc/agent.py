@@ -27,7 +27,7 @@ import kofserver_pb2, kofserver_pb2_grpc
 from kofserver_pb2 import ErrorCode as KOFErrorCode
 
 class Agent:
-    def __init__(self):
+    def __init__(self, executor):
         # TODO: Check connection health
         channel = grpc.insecure_channel('%s:%d'%(Config.conf()['agentHost'], Config.conf()['agentPort']))
         logging.info("Agent Connecting...")
@@ -43,6 +43,20 @@ class Agent:
         self.channel = channel
         # The kofserver gRPC stub
         self.stub = kofserver_pb2_grpc.KOFServerStub(self.channel)
+
+        # Store executor for future use.
+        self.executor = executor
+    
+    def ListenForGameEvent(self, gameName, callback):
+        def ListenForGameEventInternal():
+            try:
+                req = kofserver_pb2.GameEventListenerReq(gameName=gameName)
+                stream = self.stub.GameEventListener(req)
+                for evt in stream:
+                    callback(evt)
+            except:
+                logging.exception("Exception in ListenForGameEventInternal")
+        result = self.executor.submit(ListenForGameEventInternal)
 
     def CreateGame(self, gameName, scenarioName):
         req = kofserver_pb2.CreateGameReq(gameName=gameName, scenarioName=scenarioName)
@@ -68,10 +82,12 @@ class Agent:
     def PlayerRegister(self, gameName, playerName):
         req = kofserver_pb2.PlayerRegisterReq(gameName=gameName, playerName=playerName)
         reply = self.stub.PlayerRegister(req)
-        if reply.error == KOFErrorCode.ERROR_NONE:
-            print("Player register successful")
-        else:
-            print("Player register failed: %s"%(str(reply.error),))
+        return reply.error
+    
+    def PlayerInfo(self, gameName, playerName):
+        req = kofserver_pb2.PlayerInfoReq(gameName=gameName, playerName=playerName)
+        reply = self.stub.PlayerInfo(req)
+        return reply
 
     def PlayerIssueSC(self, gameName, playerName, shellCode):
         req = kofserver_pb2.PlayerIssueSCReq(gameName=gameName, playerName=playerName, shellCode=shellCode)

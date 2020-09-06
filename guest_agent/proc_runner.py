@@ -25,6 +25,7 @@
 import logging
 import time
 import threading
+import subprocess
 
 import guest_agent_pb2
 from config import Config
@@ -37,14 +38,15 @@ class ProcRunner:
         self.procListLock = threading.Lock()
 
         # A thread for handling the processes, such as waiting on them.
-        self.procHandlerThread = executor.submit(GuestAgent._ProcHandlerMain, self)
         self.procHandlerMainExit = False
+        self.procHandlerThread = executor.submit(ProcRunner._ProcHandlerMain, self)
     
     def Shutdown(self):
         self.procHandlerMainExit = True
         self.procHandlerThread.result()
+        # Note: Intentionally let the child process become orphan.
 
-        def _ProcHandlerMain(self):
+    def _ProcHandlerMain(self):
         try:
             self._ProcHandlerMainReal()
         except Exception:
@@ -53,4 +55,27 @@ class ProcRunner:
     def _ProcHandlerMainReal(self):
         while not self.procHandlerMainExit:
             time.sleep(Config.conf()['procRunnerDelay'])
+            with self.procListLock:
+                remaining = []
+                for p in self.procList:
+                    # Reap the child?
+                    ret = p.poll()
+                    if ret is not None:
+                        logging.info("Reaping PID %d"%(p.pid,))
+                        p.wait()
+                        # Done with this process, we don't insert it back.
+                        continue
+                    remaining.append(p)
+                self.procList = remaining
+
+    def RunCmd(self, cmdAndArgs):
+        try:
+            process = subprocess.Popen(cmdAndArgs, shell=True)
+        except Exception:
+            # Let the caller handle it.
+            raise
+        with self.procListLock:
+            self.procList.append(process)
+        return process
+
             

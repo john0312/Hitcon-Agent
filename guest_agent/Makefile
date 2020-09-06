@@ -19,10 +19,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-all: guest_agent_pb2.py
+all: guest_agent_pb2.py kofserver_pb2.py
 
 guest_agent_pb2.py: guest_agent.proto
-	python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. guest_agent.proto
+	python -m grpc_tools.protoc -I. -I../kofserver --python_out=. --grpc_python_out=. guest_agent.proto
+
+kofserver_pb2.py: ../kofserver/kofserver.proto
+	python -m grpc_tools.protoc -I. -I../kofserver --python_out=. --grpc_python_out=. kofserver.proto
 
 clean:
-	rm -f guest_agent_pb2.py guest_agent_pb2_grpc.py
+	rm -f guest_agent_pb2.py guest_agent_pb2_grpc.py kofserver_pb2.py kofserver_pb2_grpc.py

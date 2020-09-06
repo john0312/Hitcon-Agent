@@ -23,12 +23,16 @@
 import logging
 import base64
 import pydle
+import asyncio
 
 from config import Config
 from kofserver_pb2 import ErrorCode as KOFErrorCode
+from kofserver_pb2 import GameEventType
+import kofserver_pb2
 
 class IRC(pydle.Client):
     async def on_connect(self):
+        self.loop = asyncio.get_event_loop()
         await self.join(self.channel)
         logging.info("Bot Join %s" % (self.channel))
 
@@ -36,6 +40,8 @@ class IRC(pydle.Client):
         if nick == self.nickname:
             # Never respond to self.
             return
+        if target != self.channel:
+            logging.warn("Discarding message from %s to %s: %s"%(nick, target, message))
 
         reply = None
         if self._IsAdmin(nick):
@@ -62,7 +68,8 @@ class IRC(pydle.Client):
         if self.gameName == None or self.scenario == None:
             return
         if nick not in self.userSet:
-            self.PlayerRegister(self.gameName, nick)
+            registerMsg = self.PlayerRegister(self.gameName, nick)
+            await self.message(target, registerMsg)
             self.userSet.add(nick)
         if message.startswith("Cmd ") == True:
             self.PlayerIssueCmd(self.gameName, nick, message)
@@ -104,16 +111,68 @@ class IRC(pydle.Client):
         if self.gameName is not None:
             errMsg = "Previous game not destroyed properly!"
             return errMsg
-        self.gameName = message[1]
-        self.scenario = message[2]
-        result = self.agent.CreateGame(self.gameName, self.scenario)
+        gameName = message[1]
+        scenario = message[2]
+        result = self.agent.CreateGame(gameName, scenario)
         if result != KOFErrorCode.ERROR_NONE:
             errMsg = "Game creation failed, error code %s"%(str(result),)
         else:
             errMsg = "Game created"
+        self.scenario = scenario
+        self.OnGameSet(gameName)
         return errMsg
-        
     
+    # This is called when a game is started or it is known that we are on a game (through SetCurrentGame).
+    def OnGameSet(self, gameName):
+        self.gameName = gameName
+        # Start the event listener
+        async def onGameEventReal(evt):
+            await self._OnEvent(gameName, evt)
+        def onGameEvent(evt):
+            # agent runs on executor, so we need to post it to the loop here.
+            asyncio.run_coroutine_threadsafe(onGameEventReal(evt), self.loop)
+        self.agent.ListenForGameEvent(self.gameName, onGameEvent)
+    
+    async def _OnEvent(self, gameName, evt):
+        try:
+            await self._OnEventReal(gameName, evt)
+        except:
+            # Display exception here instead of letting it go nowhere.
+            logging.exception("Exception in _OnEvent")
+
+    async def _OnEventReal(self, gameName, evt):
+        print("Event: %s"%(str(evt),))
+        if gameName != self.gameName:
+            logging.warn("Discarding event %s not for current game %s/%s"%(str(evt), self.gameName, gameName))
+            return
+        if evt.eventType == GameEventType.PROC_CREATE or evt.eventType == GameEventType.PROC_TERMINATE:
+            action = "created" if evt.eventType == GameEventType.PROC_CREATE else "terminated"
+            playerMsg = ""
+            if evt.playerName != "":
+                playerMsg = "by %s "%(evt.playerName,)
+            msg = "PID %d (%s) %s%s"%(evt.info.pid, evt.info.cmdline, playerMsg, action)
+            if evt.info.cmdline != "":
+                await self.message(self.channel, msg)
+
+        if evt.eventType == GameEventType.PLAYER_START_GAIN:
+            reason = IRC.Reason2Str(evt.gainReason)
+            msg = "Player %s's %s is up! Somebody bash him/her/them!"%(evt.playerName, reason)
+            await self.message(self.channel, msg)
+        if evt.eventType == GameEventType.PLAYER_STOP_GAIN:
+            reason = IRC.Reason2Str(evt.gainReason)
+            msg = "Player %s's %s is down! Too bad for him/her/them!"%(evt.playerName, reason)
+            await self.message(self.channel, msg)
+
+    # TODO: Move this somewhere else?
+    @staticmethod
+    def Reason2Str(r):
+            if r == kofserver_pb2.GainReason.REASON_PORT:
+                return "port"
+            if r == kofserver_pb2.GainReason.REASON_PID:
+                return "process"
+            return "none"
+
+            
     def StartGame(self, message):
         message = message.split(" ")
         if len(message) != 2:
@@ -130,7 +189,17 @@ class IRC(pydle.Client):
         self.ResetGame()
 
     def PlayerRegister(self, gameName, nick):
-        self.agent.PlayerRegister(gameName, nick)    
+        result = self.agent.PlayerRegister(gameName, nick)
+        if result != KOFErrorCode.ERROR_NONE:
+            msg = "Failed to register player %s for %s"%(nick, gameName)
+            return msg
+        # Now get the port number.
+        result = self.agent.PlayerInfo(gameName, nick)
+        if len(result.info) != 1:
+            msg = "Internal register player error"
+            return msg
+        msg = "Player %s registered for %s; Port=%d"%(nick, gameName, result.info[0].port)
+        return msg
     
     def PlayerIssueSC(self, gameName, nick, message):
         message = message.split(" ")

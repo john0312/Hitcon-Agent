@@ -24,8 +24,10 @@
 import logging
 import time
 
+import kofserver_pb2
 from kofserver_pb2 import GameState
 from guest_agent_pb2 import ErrorCode as GuestErrorCode
+import game
 
 class Scorer:
     def __init__(self, game):
@@ -101,14 +103,32 @@ class Scorer:
         portScorePerSec = []
         pidUptimeList = []
         pidScorePerSec = []
+        events = []
         for p in playerSet:
             if p in pidUptime or p in portUptime:
                 playerList.append(p)
-                portUptimeList.append(portUptime[p] if p in portUptime else 0.0)
+                
+                # Deal with port
+                currentPortUptime = portUptime[p] if p in portUptime else 0.0
+                portUptimeList.append(currentPortUptime)
                 portScorePerSec.append(self.scenario['portScorePerSec'] if p in portUptime else 0.0)
-                pidUptimeList.append(pidUptime[p] if p in pidUptime else 0.0)
+                currentPortUp = True if currentPortUptime != 0.0 else False
+                if self.game.users[p]["portUp"] != currentPortUp:
+                    eventType = kofserver_pb2.GameEventType.PLAYER_START_GAIN if currentPortUp else kofserver_pb2.GameEventType.PLAYER_STOP_GAIN
+                    events.append(kofserver_pb2.GameEvent(eventType=eventType, playerName=p, gainReason=kofserver_pb2.GainReason.REASON_PORT))
+                    self.game.users[p]["portUp"] = currentPortUp
+                
+                # Deal with pid
+                currentPidUptime = pidUptime[p] if p in pidUptime else 0.0
+                pidUptimeList.append(currentPidUptime)
                 pidScorePerSec.append(self.scenario['pidScorePerSec'] if p in pidUptime else 0.0)
+                currentPidUp = True if currentPidUptime != 0.0 else False
+                if self.game.users[p]["pidUp"] != currentPidUp:
+                    eventType = kofserver_pb2.GameEventType.PLAYER_START_GAIN if currentPidUp else kofserver_pb2.GameEventType.PLAYER_STOP_GAIN
+                    events.append(kofserver_pb2.GameEvent(eventType=eventType, playerName=p, gainReason=kofserver_pb2.GainReason.REASON_PID))
+                    self.game.users[p]["pidUp"] = currentPidUp
         
+        self.game.executor.submit(game.Game.EmitGameEvents, self.game, events)
         self.scoreboard.LogTicks(self.game.gameName, playerList, portUptimeList, portScorePerSec, pidUptimeList, pidScorePerSec)
         
         return True
@@ -117,8 +137,8 @@ class Scorer:
     def CheckPID(self, playerSet):
         procInfo = self.game.agent.QueryProcInfo()
         if procInfo.reply.error != GuestErrorCode.ERROR_NONE:
-            logging.error("Failed to QueryProcInfo(), can't score player's PID")
-            return False
+            logging.error("Failed to QueryProcInfo(), result=%s, can't score player's PID"%(str(procInfo.reply),))
+            raise Exception("Failed to QueryProcInfo(), can't result=%s, score player's PID"%(str(procInfo.reply),))
         
         pidUptime = {}
         for proc in procInfo.info:
@@ -131,6 +151,7 @@ class Scorer:
                     continue
                 assert username not in pidUptime
                 pidUptime[username] = self.scenario['pidCheckInterval']
+                logging.info("Got pid %d for %s: %s"%(proc.pid, username, proc))
         
         for user in playerSet:
             if user not in pidUptime:

@@ -86,6 +86,46 @@ message PlayerInfo {
   bool pidUp = 5;
 }
 
+enum GameEventType {
+  EVT_NA = 0; // Unused
+  PROC_CREATE = 1;
+  PROC_TERMINATE = 2;
+  // Not an event, just to indicate error.
+  GAME_NOT_FOUND = 3;
+  PLAYER_START_GAIN = 4; // Player starts to gain points.
+  PLAYER_STOP_GAIN = 5; // Player stops gaining points.
+}
+
+// ProcInfo holds the information regarding a process
+message ProcInfo {
+  int32 pid = 1;
+  string name = 2;
+  string cmdline = 3;
+  double cpu_time = 4; // User+System CPU time in seconds
+  int64 memory_usage = 5; // RSS of the process
+}
+
+enum GainReason {
+  REASON_NONE = 0;
+  REASON_PORT = 1;
+  REASON_PID = 2;
+}
+
+// One of these represents an information about the event.
+message GameEvent {
+    // What happened to the event?
+    GameEventType eventType = 1;
+
+    // Details on the process if eventType is PROC_CREATE or PROC_TERMINATE
+    ProcInfo info = 2;
+    
+    // Name of the player, if involved.
+    string playerName = 3;
+
+    // Start or stop gain reason.
+    GainReason gainReason = 4;
+}
+
 // ================== API Messages ==================
 
 // NOTE: Req = Request, Rep = Reply/Response
@@ -102,6 +142,7 @@ enum ErrorCode {
   ERROR_GAME_NOT_RUNNING = 7; // Game's not running.
   ERROR_USER_NOT_REGISTERED = 8; // User/player is not registered in this game.
   ERROR_AGENT_PROBLEM = 9; // There's a problem with the agent.
+  ERROR_PLAYER_NOT_FOUND = 10; // Player's not found.
 }
 
 // Rep (Reply) is a generic response for RPC calls that uses it.
@@ -215,6 +256,11 @@ message QueryScoreRep {
   repeated PlayerScore scores = 2;
 }
 
+message GameEventListenerReq {
+  // Which game to listen for?
+  string gameName = 1;
+}
+
 service KOFServer {
   // Game lifecycle management APIs.
   // The usual call sequence is:
@@ -240,4 +286,7 @@ service KOFServer {
 
   // Scoreboard related
   rpc QueryScore(QueryScoreReq) returns (QueryScoreRep) {}
+
+  // Game event 
+  rpc GameEventListener(GameEventListenerReq) returns (stream GameEvent) {}
 }

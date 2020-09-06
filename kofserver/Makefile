@@ -22,10 +22,10 @@
 all: kofserver_pb2.py guest_agent_pb2.py
 
 kofserver_pb2.py: kofserver.proto
-	python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. kofserver.proto
+	python -m grpc_tools.protoc -I. -I../guest_agent --python_out=. --grpc_python_out=. kofserver.proto
 
 guest_agent_pb2.py: ../guest_agent/guest_agent.proto
-	python -m grpc_tools.protoc -I../guest_agent --python_out=. --grpc_python_out=. guest_agent.proto
+	python -m grpc_tools.protoc -I. -I../guest_agent --python_out=. --grpc_python_out=. guest_agent.proto
 
 clean:
 	rm -f kofserver_pb2.py kofserver_pb2_grpc.py

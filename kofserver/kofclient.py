@@ -28,14 +28,17 @@ $ python3 kofclient.py --action=startgame --game_name=game1
 $ python3 kofclient.py --action=destroygame --game_name=game1
 $ python3 kofclient.py --action=querygame --game_name=
 $ python3 kofclient.py --action=playerreg --game_name=game1 --player=John
+$ python3 kofclient.py --action=playerinfo --game_name=game1 --player=John
 $ python3 kofclient.py --action=playerissuecmd --game_name=game1 --player=John '--cmd=echo Start; sleep 30; echo End'
 $ python3 kofclient.py --action=queryscore --game_name=game1 --player=
+$ python3 kofclient.py --action=gameevent --game_name=game1
 """
 
 import logging
 import os
 import argparse
 import grpc
+from concurrent import futures
 
 from kofserver_pb2 import ErrorCode as KOFErrorCode
 import kofserver_pb2, kofserver_pb2_grpc
@@ -50,11 +53,12 @@ def main():
     parser.add_argument('--port', type=int, default=29110, help='The port to connect to')
 
     # Commands 
-    parser.add_argument('--action', type=str, choices=['creategame', 'startgame', 'destroygame', 'querygame', 'playerreg', 'playerissuecmd', 'queryscore'], help='Action to carry out.')
+    parser.add_argument('--action', type=str, choices=['creategame', 'startgame', 'destroygame', 'querygame', 'playerreg', 'playerinfo', 'playerissuecmd', 'queryscore', 'gameevent'], help='Action to carry out.')
     parser.add_argument('--game_name', type=str, default='MyGame')
     parser.add_argument('--scenario', type=str, default='MyScenario')
     parser.add_argument('--player', type=str, default='John')
     parser.add_argument('--cmd', type=str, default='sleep 30')
+    parser.add_argument('--timeout', type=float, default=-1.0, help='Timeout for gameevent')
     
     """
     --action=creategame --game_name=<GameName> --name=<Scenario>
@@ -62,8 +66,10 @@ def main():
     --action=destroygame --game_name=<GameName>
     --action=querygame [--game_name=<GameName>]
     --action=playerreg --game_name=<GameName> --player=<PlayerName>
+    --action=playerinfo --game_name=<GameName> --player=<PlayerName>
     --action=playerissuecmd --game_name=<GameName> --player=<PlayerName> --cmd=<Cmd>
     --action=queryscore --game_name=<GameName> --player=<PlayerName>
+    --action=gameevent --game_name=<GameName>
     """
 
     args = parser.parse_args()
@@ -111,6 +117,15 @@ def main():
             else:
                 print("Player register failed: %s"%(str(reply.error),))
         
+        if args.action == 'playerinfo':
+            req = kofserver_pb2.PlayerInfoReq(gameName=args.game_name, playerName=args.player)
+            reply = stub.PlayerInfo(req)
+            if reply.reply.error == KOFErrorCode.ERROR_NONE:
+                print("Result:")
+                print(reply)
+            else:
+                print("Query player info failed: %s"%(str(reply.reply.error),))
+        
         if args.action == 'playerissuecmd':
             req = kofserver_pb2.PlayerIssueCmdReq(gameName=args.game_name, playerName=args.player, cmd=args.cmd)
             reply = stub.PlayerIssueCmd(req)
@@ -128,5 +143,23 @@ def main():
                 print(reply)
             else:
                 print("Query score failed: %s"%(str(reply.reply.error),))
+        
+        if args.action == 'gameevent':
+            executor = futures.ThreadPoolExecutor(max_workers=8)
+
+            req = kofserver_pb2.GameEventListenerReq(gameName=args.game_name)
+            stream = stub.GameEventListener(req)
+            def killstream():
+                time.sleep(args.timeout)
+                stream.cancel()
+            if args.timeout > 0.0:
+                executor.submit(killstream)
+            try:
+                for evt in stream:
+                    print("Event: %s"%(str(evt),))
+            except Exception:
+                logging.exception("Done listening for event")
+            executor.shutdown
+        
 if __name__ == "__main__":
     main()

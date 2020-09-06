@@ -103,7 +103,7 @@ def main():
 
         if args.action == 'procevent':
             executor = futures.ThreadPoolExecutor(max_workers=8)
-            stream = stub.ProcessEventListener(guest_agent_pb2.ProcessEventListenerReq())
+            stream = stub.EventListener(guest_agent_pb2.EventListenerReq())
             def killstream(s):
                 time.sleep(args.timeout)
                 stream.cancel()

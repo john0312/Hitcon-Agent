@@ -23,6 +23,7 @@
 # KOF Server request.
 
 import logging
+import queue
 
 from kofserver_pb2 import ErrorCode as KOFErrorCode
 from kofserver_pb2 import GameState
@@ -95,10 +96,17 @@ class KOFServer(kofserver_pb2_grpc.KOFServerServicer):
         return kofserver_pb2.Rep(error=error)
 
     def PlayerInfo(self, request, context):
+        genericReply = kofserver_pb2.Rep(error=KOFErrorCode.ERROR_NONE)
         if request.gameName not in self.games:
-            return kofserver_pb2.Rep(error=KOFErrorCode.ERROR_GAME_NOT_FOUND)
-        error = self.games[request.gameName].QueryPlayerInfo(request.playerName)
-        return kofserver_pb2.Rep(error=error)
+            genericReply.error = KOFErrorCode.ERROR_GAME_NOT_FOUND
+            return kofserver_pb2.PlayerInfoRep(reply=genericReply)
+        try:
+            result = self.games[request.gameName].QueryPlayerInfo(request.playerName)
+        except:
+            logging.exception("Exception in PlayerInfo")
+            result=[]
+            genericReply.error = KOFErrorCode.ERROR_PLAYER_NOT_FOUND
+        return kofserver_pb2.PlayerInfoRep(reply=genericReply, info=result)
 
     def PlayerIssueCmd(self, request, context):
         if request.gameName not in self.games:
@@ -120,6 +128,30 @@ class KOFServer(kofserver_pb2_grpc.KOFServerServicer):
             score.portUptime = r['portUptime']
             reply.scores.append(score)
         return reply
+
+    def GameEventListener(self, request, context):
+        if request.gameName not in self.games:
+            logging.error("GameEventListener called with invalid game %s"%(request.gameName,))
+            yield kofserver_pb2.GameEvent(eventType=kofserver_pb2.GameEventType.GAME_NOT_FOUND)
+            return
+        
+        q = queue.Queue(32)
+        def callback(evt):
+            try:
+                q.put(evt)
+            except:
+                logging.exception("GameEventListener queue full")
+        self.games[request.gameName].AddEventCallback(callback)
+        try:
+            while True:
+                evt = q.get()
+                if evt is None:
+                    # Signal us to stop.
+                    break
+                yield evt
+        except:
+            logging.exception("GameEventListener ended")
+        self.games[request.gameName].RemoveEventCallback(callback)
 
     def Shutdown(self):
         logging.info("Shutting down all games.")

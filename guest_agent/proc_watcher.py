@@ -28,6 +28,7 @@ import psutil
 import threading
 
 import guest_agent_pb2
+import kofserver_pb2
 from config import Config
 
 class ProcWatcher:
@@ -48,11 +49,13 @@ class ProcWatcher:
         self.mainThread.result()
     
     def RegisterQueue(self, q):
+        print("RegisterQueue(%s)"%(str(q),))
         with self.queueSetLock:
             self.queueSet.add(q)
         return True
     
     def UnregisterQueue(self, q):
+        print("UnregisterQueue(%s)"%(str(q),))
         with self.queueSetLock:
             try:
                 self.queueSet.remove(q)
@@ -82,19 +85,22 @@ class ProcWatcher:
             for k in newProcDict:
                 if k not in self.procDict:
                     # New process
-                    self._NotifyEvent(newProcDict[k], guest_agent_pb2.ProcEventType.PROC_CREATE)
+                    self._NotifyEvent(newProcDict[k], kofserver_pb2.GameEventType.PROC_CREATE)
                     
             for k in self.procDict:
                 if k not in newProcDict:
                     # Terminated
-                    self._NotifyEvent(self.procDict[k], guest_agent_pb2.ProcEventType.PROC_TERMINATE)
+                    self._NotifyEvent(self.procDict[k], kofserver_pb2.GameEventType.PROC_TERMINATE)
             
             self.procDict = newProcDict
     
     def _GetProcDict(self):
         result = {}
-        for proc in psutil.process_iter(["name", "cmdline", "cpu_times", "memory_info"]):
-            pinfo = guest_agent_pb2.ProcInfo(pid=proc.pid)
+        for proc in psutil.process_iter(["name", "cmdline", "cpu_times", "memory_info", "status"]):
+            pstatus = proc.info['status']
+            if pstatus == psutil.STATUS_ZOMBIE or pstatus == psutil.STATUS_DEAD:
+                continue
+            pinfo = kofserver_pb2.ProcInfo(pid=proc.pid)
             pinfo.name = proc.info['name']
             pinfo.cmdline = ' '.join(proc.info['cmdline'])
             pinfo.cpu_time = proc.info['cpu_times'].user + proc.info['cpu_times'].system
@@ -104,10 +110,14 @@ class ProcWatcher:
 
     def _NotifyEvent(self, procInfo, procEventType):
         with self.queueSetLock:
+            removalSet = set()
             for q in self.queueSet:
-                event = guest_agent_pb2.ProcEvent(eventType=procEventType, info=procInfo)
+                event = kofserver_pb2.GameEvent(eventType=procEventType, info=procInfo)
                 try:
-                    q.put(event, False)
+                    q.put(event, True, 0.5)
                 except Exception:
                     logging.exception("Problem notifying create process")
+                    removalSet.add(q)
+            for q in removalSet:
+                self.queueSet.remove(q)
     

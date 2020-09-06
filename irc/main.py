@@ -20,6 +20,8 @@
 # SOFTWARE.
 
 import logging
+from concurrent import futures
+
 from irc import IRC
 from agent import Agent
 from config import Config
@@ -33,14 +35,15 @@ def main():
     Config.Init()
 
     # Initialize agent
-    agent = Agent()   
+    executor = futures.ThreadPoolExecutor(max_workers=8)
+    agent = Agent(executor)
 
     # Initialize IRC
     irc = IRC(nickname=Config.conf()['botNickName'])
     irc.SetChannel(Config.conf()['channel'])
     irc.ResetGame()
     irc.SetAgent(agent)
-    irc.run(hostname=Config.conf()['ircServer'], port=Config.conf()['ircSSLPort'], tls=True, tls_verify=True)
+    irc.run(hostname=Config.conf()['ircServer'], port=Config.conf()['ircSSLPort'], tls=True, tls_verify=False)
 
 if __name__ == '__main__':
     main()
