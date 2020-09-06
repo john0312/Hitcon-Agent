@@ -2,8 +2,8 @@
 
 Demo app using Vue and Socket.io
 
-- Runs port `8080`
-- It communicates trough web sockets on port `5000`
+- Runs port `8081`
+- It communicates trough web sockets on port `8080`
 
 # Running
 
@@ -15,7 +15,20 @@ $ cd web
 # Install dependencies
 $ npm install
 
-# Serve with hot reload at localhost:8080
+$ vim build/webpack.dev.conf.js
+    module.exports = {
+        //...
+        devServer: {
+            // this achieves the same effect as the first example
+            // with the bonus of not having to update your config
+            // if new subdomains need to access the dev server
+            allowedHosts: [
+            '.host.com',
+            'host2.com'
+            ]
+        }
+    };
+# Serve with hot reload at localhost:8081
 $ npm run dev
 ```
 
@@ -27,7 +40,7 @@ $ cd server
 # Install dependencies
 $ npm install
 
-# Serve on localhost:5000
+# Serve on localhost:8080
 $ node server.js
 ```
 
