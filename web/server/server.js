@@ -24,27 +24,35 @@
 const app = require('express')();
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
+const yaml = require('js-yaml');
+const fs   = require('fs');
 const { checkOrigin } = require('./util/middleWare');
 const ConfigManager = require('./config/ConfigManager');
 const Broadcast = require('./util/Broadcast');
 const Agent = require('./util/Agent');
 const Game = require('./service/Game');
 
-app.use(checkOrigin);
-// TODO: Remove clients 
-app.get('/clients', (req, res) => {
-  res.send(Object.keys(io.sockets.clients().connected))
-})
 
-// Initialize Game
-let configManager = new ConfigManager();
-let broadcast = new Broadcast(io);
-let agent = new Agent(configManager);
-let game = new Game(configManager, broadcast);
-// TODO: Support multiple games
-game.run("game1", agent);
-
-const webServerPort = configManager.getConfig(['webServerPort']);
-http.listen(webServerPort, () => {
-  console.log(`Listening on *: ${webServerPort}`)
-})
+try {
+  app.use(checkOrigin);
+  // TODO: Remove clients 
+  app.get('/clients', (req, res) => {
+    res.send(Object.keys(io.sockets.clients().connected))
+  })
+  
+  // Initialize Game
+  let configManager = new ConfigManager();
+  let broadcast = new Broadcast(io);
+  let agent = new Agent(configManager);
+  let game = yaml.safeLoad(fs.readFileSync('game.yml', 'utf8'));
+  game.gameNames.forEach(gameName => {
+    new Game(configManager, broadcast).run(gameName, agent);
+  });
+  
+  const webServerPort = configManager.getConfig(['webServerPort']);
+  http.listen(webServerPort, () => {
+    console.log(`Listening on *: ${webServerPort}`);
+  });
+} catch (err) {
+  console.error(err);
+}
