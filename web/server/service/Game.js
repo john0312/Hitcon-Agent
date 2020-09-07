@@ -35,6 +35,6 @@ module.exports = class Game {
         // Emit score list to frontend
         const scoreListCallback = (data) => this.broadcast.all('scoreList', JSON.stringify(data));
         const interval = this.configManager.getConfig(['queryScoreIntervalMillisecond']);
-        setInterval(function () { agent.queryScore(gameName, null, scoreListCallback) }, interval);
+        setInterval(function () { agent.queryScore(gameName, scoreListCallback) }, interval);
     }
 }

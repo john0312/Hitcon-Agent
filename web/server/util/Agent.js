@@ -71,8 +71,12 @@ module.exports = class Agent {
             stream.on('data', (data) => {
                 let message = composeMessage(this.configManager.getConfig(['message']), data);
                 if(message !== '') {
-                    console.log(message);
-                    callback(message);
+                    let result = {
+                        gameName: gameName,
+                        message: message
+                    };
+                    console.log(result);
+                    callback(result);
                 }
             });
             stream.on('error', (err) => {
@@ -83,8 +87,8 @@ module.exports = class Agent {
         }
     }
 
-    queryScore(gameName, playerName, callback) {
-        let req = {gameName: gameName, playerName: playerName, };
+    queryScore(gameName, callback) {
+        let req = {gameName: gameName, playerName: null, };
         try {
             this.client.queryScoreAsync(req, (err, res) => {
                 if(err) {
@@ -92,8 +96,12 @@ module.exports = class Agent {
                 }
                 let errorCode = res.reply.error;
                 if(errorCode === protoEnum.ErrorCode.ERROR_NONE) {
-                    console.log(`Score List length: ${res.scores.length}`);
-                    callback(res);
+                    let result = {
+                        gameName: gameName,
+                        message: res
+                    };
+                    console.log(`Score List length: ${result.message.scores.length}`);
+                    callback(result);
                 }
             });   
         } catch(err) {
