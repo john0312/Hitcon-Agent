@@ -23,17 +23,17 @@ SOFTWARE. -->
   <v-card>
     <v-divider />
     <v-card-text>
-      <ScoreList />
+      <Tab />
     </v-card-text>
   </v-card>
 </template>
 
 <script>
-import ScoreList from '@/components/ScoreList'
+import Tab from '@/components/Tab'
 
 export default {
   components: {
-    ScoreList,
+    Tab,
   },
 }
 </script>

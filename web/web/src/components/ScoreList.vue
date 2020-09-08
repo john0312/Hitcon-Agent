@@ -34,7 +34,7 @@ SOFTWARE. -->
     </v-card-title>
     <v-data-table
       :headers="headers"
-      :items="desserts"
+      :items="scoresList"
       :search="search"
       :rows-per-page-items="[15, 30, 50, 100]"
       :pagination.sync="pagination"
@@ -50,7 +50,14 @@ SOFTWARE. -->
 </template>
 
 <script>
+import { createNamespacedHelpers } from 'vuex'
+const { mapState, mapGetters } = createNamespacedHelpers('game')
+
 export default {
+  computed: {
+    ...mapState(['currentName', 'scoresMap']),
+    ...mapGetters(['getCurrentName', 'getScoresMap']),
+  },
   data() {
     return {
       search: '',
@@ -70,16 +77,11 @@ export default {
         { text: 'Port Up Time', value: 'portUptime' },
         { text: 'Score', value: 'score' },
       ],
-      desserts: [],
+      scoresList: [],
     }
   },
   mounted() {
-    this.$socket.on('scoreList', data => {
-      let d = JSON.parse(data)
-      if (d.reply.error === 'ERROR_NONE') {
-        this.desserts = d.scores
-      }
-    })
+    this.scoresList = this.scoresMap[this.currentName] ? this.scoresMap[this.currentName] : []
   },
 }
 </script>

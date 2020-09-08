@@ -21,49 +21,60 @@
  * SOFTWARE.
  */
 
-import api from '../../api'
 import * as mutation from '../mutation-types'
 
 const state = {
-  scoreList: [],
-  loading: false,
+  currentTabIndex: 1,
+  currentName: '',
+  scoresMap: {},
+  nameList: [],
 }
 
 const getters = {
-  scoreList: (state) => state.scoreList,
+  getCurrentTabIndex: (state) => state.currentTabIndex,
+  getCurrentName: (state) => state.currentName,
+  getNameList: (state) => state.nameList,
+  getScoresMap: (state) => state.scoresMap,
 }
 
 const mutations = {
-  [mutation.SET_SCORE_LIST](state, payload) {
-    state.scoreList = payload
+  [mutation.SET_CURRENT_GAME_TAB_INDEX](state, index) {
+    state.currentTabIndex = index
   },
-  [mutation.IS_LOADING_SCORE_LIST](state, payload) {
-    state.loading = payload
+  [mutation.SET_CURRENT_GAME_NAME](state, name) {
+    state.currentName = name
+  },
+  [mutation.SET_GAME_SCORE_MAP](state, map) {
+    state.scoresMap = map
+  },
+  [mutation.SET_GAME_NAME_LIST](state, list) {
+    state.nameList = list
+  },
+  [mutation.INSERT_GAME_SCORE_MAP](state, gameName, scores) {
+    state.scoresMap[gameName] = scores
   },
 }
 
 const actions = {
-  getScoreList: ({ commit }) => new Promise((resolve, reject) => {
-    const onSuccess = (response) => {
-      commit(mutation.SET_SCORE_LIST, response.body)
-      commit(mutation.IS_LOADING_SCORE_LIST, false)
-
-      resolve(response)
-    }
-
-    const onError = (error) => {
-      commit(mutation.SET_SCORE_LIST, [])
-      commit(mutation.IS_LOADING_SCORE_LIST, false)
-      reject(error)
-    }
-
-    commit(mutation.IS_LOADING_SCORE_LIST, true)
-
-    api.getScoreList().then(onSuccess).catch(onError)
-  }),
+  setCurrentTabIndex: ({commit}, index) => {
+    commit(mutation.SET_CURRENT_GAME_TAB_INDEX, index)
+  },
+  setCurrentName: ({commit}, name) => {
+    commit(mutation.SET_CURRENT_GAME_NAME, name)
+  },
+  setScoresMap: ({commit}, map) => {
+    commit(mutation.SET_GAME_SCORE_MAP, map)
+  },
+  setNameList: ({commit}, list) => {
+    commit(mutation.SET_GAME_NAME_LIST, list)
+  },
+  insertScoresMap: ({commit}, gameName, scores) => {
+    commit(mutation.INSERT_GAME_SCORE_MAP, gameName, scores)
+  },
 }
 
 export default {
+  namespaced: true,
   state,
   actions,
   getters,
