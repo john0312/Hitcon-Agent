@@ -44,7 +44,23 @@ try {
     let configManager = new ConfigManager();
     let broadcast = new Broadcast(io);
     let agent = new Agent(configManager);
+    
     let gameFile = yaml.safeLoad(fs.readFileSync('game.yml', 'utf8'));
+    // TODO: get all game information once and store in global variable
+    // Send game information to new user
+    io.sockets.on('connection', function (socket) {
+        socket.emit('news', {});
+        // socket.emit('news', {
+        //    "gameList": ["game1", "game2"], 
+        //    "scoresMap": {
+        //        "game1": [
+        //            {"playerName": `name-1`, "score": 200, "pidUptime":50, "portUptime":40},
+        //           {"playerName": `name-2`, "score": 300, "pidUptime":50, "portUptime":40}
+        //        ], 
+        //        "game2": [
+        //            {"playerName": `name-3`, "score": 500, "pidUptime":50, "portUptime":40}
+        //        ]}});
+    });
     gameFile.names.forEach(gameName => {
         new GameListener(configManager, broadcast).run(gameName, agent);
     });

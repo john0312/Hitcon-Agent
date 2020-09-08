@@ -28,10 +28,28 @@ SOFTWARE. -->
 
 <script>
 import EventNotification from '@/components/EventNotification'
+import { createNamespacedHelpers } from 'vuex'
+const { mapActions } = createNamespacedHelpers('game')
 
 export default {
   components: {
     EventNotification,
+  },
+  methods: {
+    ...mapActions(['setScoresMap', 'setNameList']),
+  },
+  mounted() {
+    this.$socket.on('news', data => {
+      this.setNameList(data.gameList)
+      this.setScoresMap(data.scoresMap)
+      console.log('Init')
+    })
+    this.$socket.on('scoreList', data => {
+      let d = JSON.parse(data)
+      if (d.message.reply.error === 'ERROR_NONE') {
+        console.log(d.gameName)
+      }
+    })
   },
 }
 </script>

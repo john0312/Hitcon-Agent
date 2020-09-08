@@ -42,7 +42,9 @@ export default {
 
   mounted() {
     this.$socket.on('event', data => {
-      this.snackbar.text = `${data.replace(/"/g, '')}`
+      let d = JSON.parse(data)
+      console.log(d.gameName)
+      this.snackbar.text = `${d.message.replace(/"/g, '')}`
       this.snackbar.visible = true
     })
   },

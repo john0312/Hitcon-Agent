@@ -24,14 +24,14 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 import VueResource from 'vue-resource'
-import scoreList from './modules/scoreList'
+import game from './modules/game'
 
 Vue.use(Vuex)
 Vue.use(VueResource)
 
 export default new Vuex.Store({
   modules: {
-    scoreList,
+    game: game,
   },
   strict: true,
 })
