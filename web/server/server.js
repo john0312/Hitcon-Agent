@@ -30,29 +30,29 @@ const { checkOrigin } = require('./util/middleWare');
 const ConfigManager = require('./config/ConfigManager');
 const Broadcast = require('./util/Broadcast');
 const Agent = require('./util/Agent');
-const Game = require('./service/Game');
+const GameListener = require('./service/GameListener');
 
 
 try {
-  app.use(checkOrigin);
-  // TODO: Remove clients 
-  app.get('/clients', (req, res) => {
-    res.send(Object.keys(io.sockets.clients().connected))
-  })
-  
-  // Initialize Game
-  let configManager = new ConfigManager();
-  let broadcast = new Broadcast(io);
-  let agent = new Agent(configManager);
-  let game = yaml.safeLoad(fs.readFileSync('game.yml', 'utf8'));
-  game.gameNames.forEach(gameName => {
-    new Game(configManager, broadcast).run(gameName, agent);
-  });
-  
-  const webServerPort = configManager.getConfig(['webServerPort']);
-  http.listen(webServerPort, () => {
-    console.log(`Listening on *: ${webServerPort}`);
-  });
+    app.use(checkOrigin);
+    // TODO: Remove clients 
+    app.get('/clients', (req, res) => {
+        res.send(Object.keys(io.sockets.clients().connected))
+    })
+    
+    // Initialize Game
+    let configManager = new ConfigManager();
+    let broadcast = new Broadcast(io);
+    let agent = new Agent(configManager);
+    let gameFile = yaml.safeLoad(fs.readFileSync('game.yml', 'utf8'));
+    gameFile.names.forEach(gameName => {
+        new GameListener(configManager, broadcast).run(gameName, agent);
+    });
+    
+    const webServerPort = configManager.getConfig(['webServerPort']);
+    http.listen(webServerPort, () => {
+        console.log(`Listening on *: ${webServerPort}`);
+    });
 } catch (err) {
-  console.error(err);
+    console.error(err);
 }
