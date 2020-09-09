@@ -21,7 +21,36 @@
  * SOFTWARE.
  */
 
-export const SET_GAME_SCORE_MAP = 'SET_GAME_SCORE_MAP'
-export const SET_CURRENT_GAME_NAME = 'SET_CURRENT_GAME_NAME'
-export const SET_GAME_NAME_LIST = 'SET_GAME_NAME_LIST'
-export const UPDATE_GAME_SCORE_MAP = 'UPDATE_GAME_SCORE_MAP'
+const yaml = require('js-yaml');
+const fs   = require('fs');
+const path = require('path');
+
+module.exports = class Game {
+    constructor(configManager) {
+        this.scoresMap = {};
+        this.configManager = configManager;
+        try {
+            const GAME_PATH = path.resolve(__dirname, this.configManager.getConfig(['gameFile']));
+            this.gameList = yaml.safeLoad(fs.readFileSync(GAME_PATH, 'utf8')).names;
+        } catch(err) {
+            this.gameList = [];
+            console.error(err);
+        }
+    }
+    // TODO: Implement Lock
+    insertScoresMap(gameName, scores) {
+        this.scoresMap[gameName] = scores;
+    }
+
+    getGameList() {
+        return this.gameList;
+    }
+
+    getScoresMap(gameName) {
+        return this.scoresMap[gameName] ? this.scoresMap[gameName] : [];
+    }
+
+    getAllScoresMap() {
+        return this.scoresMap;
+    }
+}

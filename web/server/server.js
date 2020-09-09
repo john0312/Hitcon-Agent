@@ -24,51 +24,49 @@
 const app = require('express')();
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
-const yaml = require('js-yaml');
-const fs   = require('fs');
 const { checkOrigin } = require('./util/middleWare');
 const ConfigManager = require('./config/ConfigManager');
 const Broadcast = require('./util/Broadcast');
 const Agent = require('./util/Agent');
 const GameListener = require('./service/GameListener');
+const Game = require('./util/Game');
 
+async function main() {
+    try {
+        app.use(checkOrigin);
+        // TODO: Remove clients 
+        app.get('/clients', (req, res) => {
+            res.send(Object.keys(io.sockets.clients().connected))
+        })
+        
+        // Initialize Game
+        let configManager = new ConfigManager();
+        let broadcast = new Broadcast(io);
+        let game = new Game(configManager);
+        let agent = new Agent(configManager, game);
+        await agent.init();
 
-try {
-    app.use(checkOrigin);
-    // TODO: Remove clients 
-    app.get('/clients', (req, res) => {
-        res.send(Object.keys(io.sockets.clients().connected))
-    })
-    
-    // Initialize Game
-    let configManager = new ConfigManager();
-    let broadcast = new Broadcast(io);
-    let agent = new Agent(configManager);
-    
-    let gameFile = yaml.safeLoad(fs.readFileSync('game.yml', 'utf8'));
-    // TODO: get all game information once and store in global variable
-    // Send game information to new user
-    io.sockets.on('connection', function (socket) {
-        socket.emit('news', {});
-        // socket.emit('news', {
-        //    "gameList": ["game1", "game2"], 
-        //    "scoresMap": {
-        //        "game1": [
-        //            {"playerName": `name-1`, "score": 200, "pidUptime":50, "portUptime":40},
-        //           {"playerName": `name-2`, "score": 300, "pidUptime":50, "portUptime":40}
-        //        ], 
-        //        "game2": [
-        //            {"playerName": `name-3`, "score": 500, "pidUptime":50, "portUptime":40}
-        //        ]}});
-    });
-    gameFile.names.forEach(gameName => {
-        new GameListener(configManager, broadcast).run(gameName, agent);
-    });
-    
-    const webServerPort = configManager.getConfig(['webServerPort']);
-    http.listen(webServerPort, () => {
-        console.log(`Listening on *: ${webServerPort}`);
-    });
-} catch (err) {
-    console.error(err);
+        // Send game information to new user
+        io.sockets.on('connection', function (socket) {
+            socket.emit('SGl0Y29uMjAyMA==', {
+                "gameList": game.getGameList(), 
+                "scoresMap": game.getAllScoresMap()});
+        });
+
+        // Create game listener
+        game.getGameList().forEach(gameName => {
+            new GameListener(configManager, broadcast).run(gameName, agent);
+        });
+        
+        const webServerPort = configManager.getConfig(['webServerPort']);
+        http.listen(webServerPort, () => {
+            console.log(`Listening on *: ${webServerPort}`);
+        });
+    } catch (err) {
+        console.error(err);
+    }    
+}
+
+module.exports = {
+    main: main
 }

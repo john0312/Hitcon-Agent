@@ -30,10 +30,34 @@ SOFTWARE. -->
 
 <script>
 import Tab from '@/components/Tab'
+import { createNamespacedHelpers } from 'vuex'
+const { mapState, mapGetters, mapActions } = createNamespacedHelpers('game')
 
 export default {
   components: {
     Tab,
+  },
+  computed: {
+    ...mapState(['nameList']),
+    ...mapGetters(['getNameList']),
+  },
+  methods: {
+    ...mapActions(['setScoresMap', 'setNameList', 'updateScoresMap', 'setCurrentName']),
+  },
+  mounted() {
+    this.$socket.on('SGl0Y29uMjAyMA==', data => {
+      this.setNameList(data.gameList)
+      this.setScoresMap(data.scoresMap)
+      if (this.nameList.length > 0) {
+        this.setCurrentName(this.nameList[0])
+      }
+    })
+    this.$socket.on('scoreList', data => {
+      let d = JSON.parse(data)
+      if (d.message.reply.error === 'ERROR_NONE') {
+        this.updateScoresMap([d.gameName, d.message.scores])
+      }
+    })
   },
 }
 </script>

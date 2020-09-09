@@ -51,14 +51,34 @@ const protoEnum = {
 }
 
 module.exports = class Agent {
-    constructor(configManager) {
+    constructor(configManager, game) {
         const PROTO_PATH = path.resolve(__dirname, configManager.getConfig(['protoPath']));
         try {
             this.configManager = configManager;
+            this.game = game;
             this.client = new GRPCClient(PROTO_PATH, 
                 this.configManager.getConfig(['packageService']), 
                 this.configManager.getConfig(['theService']), 
                 this.configManager.getConfig(['kofServer']));
+        } catch(err) {
+            console.error(err);
+        }
+    }
+
+    async init() {
+        try{
+            let tasks = [];
+            this.game.getGameList().forEach(gameName => {
+                tasks.push(this.promiseQueryScore(gameName));
+            });
+            await Promise.all(tasks).then(results => {
+                let final = results.filter(item => !!item);
+                final.forEach(item => {
+                    this.game.insertScoresMap(item.gameName, item.message.scores);
+                })
+            }).catch(err => {
+                console.error(err);
+            })
         } catch(err) {
             console.error(err);
         }
@@ -91,22 +111,51 @@ module.exports = class Agent {
         let req = {gameName: gameName, playerName: null, };
         try {
             this.client.queryScoreAsync(req, (err, res) => {
-                if(err) {
-                    throw err;
+                let isError = err || !res;
+                if(isError) {
+                    console.error(err);
+                    return;
                 }
                 let errorCode = res.reply.error;
                 if(errorCode === protoEnum.ErrorCode.ERROR_NONE) {
+                    this.game.insertScoresMap(gameName, res.scores);
                     let result = {
                         gameName: gameName,
                         message: res
                     };
-                    console.log(`Score List length: ${result.message.scores.length}`);
+                    console.log(`GameName: ${gameName}, Score List length: ${result.message.scores.length}`);
                     callback(result);
                 }
             });   
         } catch(err) {
             console.error(err);
         }     
+    }
+
+    promiseQueryScore(gameName) {
+        let req = {gameName: gameName, playerName: null, };
+        return new Promise((resolve, reject ) => { 
+            try { 
+                this.client.queryScoreAsync(req, (err, res) => {
+                    let isError = err || !res;
+                    if(isError) {
+                        reject(err);
+                        return;
+                    }
+                    let errorCode = res.reply.error;
+                    if(errorCode === protoEnum.ErrorCode.ERROR_NONE) {
+                        let result = {
+                            gameName: gameName,
+                            message: res
+                        };
+                        console.log(`GameName: ${gameName}, Score List length: ${result.message.scores.length}`);
+                        resolve(result); 
+                    }
+                });
+            } catch(err) {
+                reject(err);
+            }
+        })  
     }
 }
 

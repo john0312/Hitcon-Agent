@@ -21,7 +21,5 @@
  * SOFTWARE.
  */
 
-export const SET_GAME_SCORE_MAP = 'SET_GAME_SCORE_MAP'
-export const SET_CURRENT_GAME_NAME = 'SET_CURRENT_GAME_NAME'
-export const SET_GAME_NAME_LIST = 'SET_GAME_NAME_LIST'
-export const UPDATE_GAME_SCORE_MAP = 'UPDATE_GAME_SCORE_MAP'
+const server = require('./server');
+server.main();

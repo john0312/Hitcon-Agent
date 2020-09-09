@@ -24,23 +24,18 @@
 import * as mutation from '../mutation-types'
 
 const state = {
-  currentTabIndex: 1,
   currentName: '',
   scoresMap: {},
   nameList: [],
 }
 
 const getters = {
-  getCurrentTabIndex: (state) => state.currentTabIndex,
   getCurrentName: (state) => state.currentName,
   getNameList: (state) => state.nameList,
   getScoresMap: (state) => state.scoresMap,
 }
 
 const mutations = {
-  [mutation.SET_CURRENT_GAME_TAB_INDEX](state, index) {
-    state.currentTabIndex = index
-  },
   [mutation.SET_CURRENT_GAME_NAME](state, name) {
     state.currentName = name
   },
@@ -50,15 +45,14 @@ const mutations = {
   [mutation.SET_GAME_NAME_LIST](state, list) {
     state.nameList = list
   },
-  [mutation.INSERT_GAME_SCORE_MAP](state, gameName, scores) {
+  [mutation.UPDATE_GAME_SCORE_MAP](state, array) {
+    let gameName = array[0]
+    let scores = array[1]
     state.scoresMap[gameName] = scores
   },
 }
 
 const actions = {
-  setCurrentTabIndex: ({commit}, index) => {
-    commit(mutation.SET_CURRENT_GAME_TAB_INDEX, index)
-  },
   setCurrentName: ({commit}, name) => {
     commit(mutation.SET_CURRENT_GAME_NAME, name)
   },
@@ -68,8 +62,8 @@ const actions = {
   setNameList: ({commit}, list) => {
     commit(mutation.SET_GAME_NAME_LIST, list)
   },
-  insertScoresMap: ({commit}, gameName, scores) => {
-    commit(mutation.INSERT_GAME_SCORE_MAP, gameName, scores)
+  updateScoresMap: ({commit}, gameName, scores) => {
+    commit(mutation.UPDATE_GAME_SCORE_MAP, gameName, scores)
   },
 }
 
