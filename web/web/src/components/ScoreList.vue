@@ -34,7 +34,7 @@ SOFTWARE. -->
     </v-card-title>
     <v-data-table
       :headers="headers"
-      :items="scoresList"
+      :items="scoresMap[currentName]"
       :search="search"
       :rows-per-page-items="[15, 30, 50, 100]"
       :pagination.sync="pagination"
@@ -77,11 +77,7 @@ export default {
         { text: 'Port Up Time', value: 'portUptime' },
         { text: 'Score', value: 'score' },
       ],
-      scoresList: [],
     }
-  },
-  mounted() {
-    this.scoresList = this.scoresMap[this.currentName] ? this.scoresMap[this.currentName] : []
   },
 }
 </script>

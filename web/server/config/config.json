@@ -4,9 +4,10 @@
   "kofServer": "0.0.0.0:9090",
   "packageService": "kofserver", 
   "theService": "KOFServer",
-  "queryScoreIntervalMillisecond": 3000,
+  "queryScoreIntervalMillisecond": 5000,
+  "gameFile": "../config/game.yml",
   "message": {
-    "mode": "zh-cn",
+    "mode": "en",
     "zh-cn": {
       "PROC_CREATE": "PID %d (%s) %s 創建， 666！",
       "PROC_TERMINATE": "PID %d (%s) %s 終止！",

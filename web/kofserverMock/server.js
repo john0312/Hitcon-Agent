@@ -46,7 +46,7 @@ function repeatEvent(call) {
         info: {
           "pid": 20,
           "name": name,
-          "cmdline": "da",
+          "cmdline": "sleep 10000",
           "cpu_time": 2.0,
           "memory_usage": 50
         },

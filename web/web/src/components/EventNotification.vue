@@ -30,7 +30,14 @@ SOFTWARE. -->
 </template>
 
 <script>
+import { createNamespacedHelpers } from 'vuex'
+const { mapState, mapGetters } = createNamespacedHelpers('game')
+
 export default {
+  computed: {
+    ...mapState(['currentName']),
+    ...mapGetters(['getCurrentName']),
+  },
   data() {
     return {
       snackbar: {
@@ -39,13 +46,13 @@ export default {
       },
     }
   },
-
   mounted() {
     this.$socket.on('event', data => {
       let d = JSON.parse(data)
-      console.log(d.gameName)
-      this.snackbar.text = `${d.message.replace(/"/g, '')}`
-      this.snackbar.visible = true
+      if (this.currentName === d.gameName) {
+        this.snackbar.text = `GameName: ${d.gameName}, ${d.message.replace(/"/g, '')}`
+        this.snackbar.visible = true
+      }
     })
   },
 }
