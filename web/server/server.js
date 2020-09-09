@@ -24,7 +24,6 @@
 const app = require('express')();
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
-const { checkOrigin } = require('./util/middleWare');
 const ConfigManager = require('./config/ConfigManager');
 const Broadcast = require('./util/Broadcast');
 const Agent = require('./util/Agent');
@@ -33,12 +32,6 @@ const Game = require('./util/Game');
 
 async function main() {
     try {
-        app.use(checkOrigin);
-        // TODO: Remove clients 
-        app.get('/clients', (req, res) => {
-            res.send(Object.keys(io.sockets.clients().connected))
-        })
-        
         // Initialize Game
         let configManager = new ConfigManager();
         let broadcast = new Broadcast(io);
@@ -50,10 +43,11 @@ async function main() {
         io.sockets.on('connection', function (socket) {
             socket.emit('SGl0Y29uMjAyMA==', {
                 "gameList": game.getGameList(), 
-                "scoresMap": game.getAllScoresMap()});
+                "scoresMap": game.getScoresMap()});
         });
 
         // Create game listener
+        // TODO: Get all scores 
         game.getGameList().forEach(gameName => {
             new GameListener(configManager, broadcast).run(gameName, agent);
         });

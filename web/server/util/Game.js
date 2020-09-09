@@ -37,20 +37,22 @@ module.exports = class Game {
             console.error(err);
         }
     }
-    // TODO: Implement Lock
+    // TODO: Deprecated
     insertScoresMap(gameName, scores) {
         this.scoresMap[gameName] = scores;
     }
+
+    // TODO: Set whole scores
+    setScoresMap() {}
 
     getGameList() {
         return this.gameList;
     }
 
     getScoresMap(gameName) {
-        return this.scoresMap[gameName] ? this.scoresMap[gameName] : [];
-    }
-
-    getAllScoresMap() {
+        if (gameName) {
+            return this.scoresMap[gameName] ? this.scoresMap[gameName] : [];
+        }
         return this.scoresMap;
     }
 }
