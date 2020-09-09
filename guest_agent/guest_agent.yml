@@ -2,3 +2,4 @@ procWatcherFirstDelay: 5
 procWatcherDelay: 0.3
 
 procRunnerDelay: 1.0
+procReadLimit: 1024

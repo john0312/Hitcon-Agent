@@ -103,10 +103,12 @@ class GuestAgent(guest_agent_pb2_grpc.GuestAgentServicer):
         logging.info("EventListener started")
         q = queue.Queue(32)
         self.procWatcher.RegisterQueue(q)
+        self.procRunner.RegisterQueue(q)
         try:
             while True:
                 event = q.get()
                 yield event
         except:
             logging.exception("EventListener ended")
+        self.procRunner.UnregisterQueue(q)
         self.procWatcher.UnregisterQueue(q)

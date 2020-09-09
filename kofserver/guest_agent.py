@@ -62,10 +62,13 @@ class GuestAgent:
 
     def _EventThreadMainReal(self):
         while True:
+            if self.stub is None:
+                return
             self._DoListenForEvent()
             if self.stub is None:
                 return
             logging.warn('DoListenForEvent exited, maybe connection is dead?')
+            self.executor.submit(GuestAgent.CheckAlive, self) # Check to see if we are OK.
             time.sleep(1.0)
     
     def _DoListenForEvent(self):

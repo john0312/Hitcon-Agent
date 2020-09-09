@@ -35,6 +35,7 @@ enum GameState {
   GAME_REBOOTING2 = 6;
   GAME_DESTROYING = 7;
   GAME_DESTROYED = 8;
+  GAME_RECREATING = 9;
 }
 
 // Game represents the information regarding each game.
@@ -94,6 +95,7 @@ enum GameEventType {
   GAME_NOT_FOUND = 3;
   PLAYER_START_GAIN = 4; // Player starts to gain points.
   PLAYER_STOP_GAIN = 5; // Player stops gaining points.
+  PROC_OUTPUT = 6;
 }
 
 // ProcInfo holds the information regarding a process
@@ -124,6 +126,9 @@ message GameEvent {
 
     // Start or stop gain reason.
     GainReason gainReason = 4;
+
+    // Process outut for PROC_OUTPUT
+    bytes procOutput = 5;
 }
 
 // ================== API Messages ==================
@@ -143,6 +148,8 @@ enum ErrorCode {
   ERROR_USER_NOT_REGISTERED = 8; // User/player is not registered in this game.
   ERROR_AGENT_PROBLEM = 9; // There's a problem with the agent.
   ERROR_PLAYER_NOT_FOUND = 10; // Player's not found.
+  ERROR_INCORRECT_STATE = 11; // Incorrect state when trying to start or destroy game.
+  ERROR_COOLDOWN = 12; // Player need to cool down.
 }
 
 // Rep (Reply) is a generic response for RPC calls that uses it.

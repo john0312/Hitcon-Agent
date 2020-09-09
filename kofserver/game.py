@@ -59,6 +59,8 @@ class Game:
 
         # Start the Game Task, which runs anything in the game that need to
         # be done repeatedly, such as scoring the user.
+        self.gameTaskClosures = []
+        self.gameTaskClosuresLock = threading.Lock()
         self.gameTaskExit = False
         self.gameTask = executor.submit(Game._GameFunc, self)
 
@@ -82,6 +84,7 @@ class Game:
         # Used by this class to notify kofserver API users.
         self.eventCallbackSet = set()
         self.eventCallbackSetLock = threading.Lock()
+
         # Callback inserted into guest agent and called by guest agent.
         self.eventCallback = lambda x: self.EmitGameEvents([x,])
         self.agent.AddCallback(self.eventCallback)
@@ -103,25 +106,51 @@ class Game:
 
     def EmitGameEvents(self, evts):
         # TODO: Event filtering?
+        filteredEvents = []
+        for evt in evts:
+            if evt == PROC_OUTPUT and not self.scenario['allowStdout']:
+                # Filtered
+                continue
+            filteredEvents.append(evt)
         with self.eventCallbackSetLock:
             for cb in self.eventCallbackSet:
-                for evt in evts:
+                for evt in filteredEvents:
                     cb(evt)
 
     # Start the game.
     def Start(self):
         # Set it to we are starting.
-        self.state = GameState.GAME_STARTING1
+        result = KOFErrorCode.ERROR_NONE
+        evt = threading.Event()
+        def StartInGameTask():
+            if self.state == GameState.GAME_CREATED:
+                self.state = GameState.GAME_STARTING1
+            else:
+                logging.warn("Trying to start %s when it's not in created state"%self.gameName)
+                result = KOFErrorCode.ERROR_INCORRECT_STATE
+            evt.set()
+        with self.gameTaskClosuresLock:
+            self.gameTaskClosures.append(StartInGameTask)
+        evt.wait()
         # GameFunc will handle the rest.
         # ie. Initialize the VM, waiting for guest agent... etc
-        return KOFErrorCode.ERROR_NONE
+        return result
 
     # Destroy the game.
     def Destroy(self):
-        if self.state != GameState.GAME_RUNNING:
-            logging.warn("Destroying game not in running state: %s %s"%(self.gameName, str(self.state)))
-        self.state = GameState.GAME_DESTROYING
-        return KOFErrorCode.ERROR_NONE
+        result = KOFErrorCode.ERROR_NONE
+        evt = threading.Event()
+        def DestroyInGameTask():
+            if self.state != GameState.GAME_RUNNING:
+                logging.warn("Destroying game not in running state: %s %s"%(self.gameName, str(self.state)))
+            self.state = GameState.GAME_DESTROYING
+            evt.set()
+        with self.gameTaskClosuresLock:
+            self.gameTaskClosures.append(DestroyInGameTask)
+        evt.wait()
+        # GameFunc will handle the rest.
+        # ie. Initialize the VM, waiting for guest agent... etc
+        return result
 
     def PlayerIssueCmd(self, playerName, cmd):
         if self.state != GameState.GAME_RUNNING:
@@ -133,11 +162,15 @@ class Game:
         if playerName not in self.users:
             logging.info("Player %s not register id game %s."%(playerName, self.gameName))
             return KOFErrorCode.ERROR_USER_NOT_REGISTERED
+        if self.users[playerName]["lastCmd"]+self.scenario["CmdCooldown"]>time.time():
+            logging.info("Player %s need to cooldown before running command."%(playerName,))
+            return KOFErrorCode.ERROR_COOLDOWN
         res = self.agent.RunCmd(cmd)
         if res.reply.error != GuestErrorCode.ERROR_NONE:
             logging.warning("Executing command '%s' failed due to agent problem %s."%(cmd, res.reply.error))
             return KOFErrorCode.ERROR_AGENT_PROBLEM
         self.SetPlayerPID(playerName, res.pid)
+        self.users[playername]["lastCmd"] = time.time()
         return KOFErrorCode.ERROR_NONE
 
     def SetPlayerPID(self, playerName, pid):
@@ -162,6 +195,11 @@ class Game:
         logging.info("GameFunc for %s running"%(self.gameName,))
         # This method runs for the entire time life cycle of the game.
         while True:
+            with self.gameTaskClosuresLock:
+                for c in self.gameTaskClosures:
+                    c()
+                self.gameTaskClosures = []
+
             if self.gameTaskExit:
                 # Time to go
                 return True
@@ -204,6 +242,13 @@ class Game:
                     self.state = GameState.GAME_RUNNING
                     self.scorer.NotifyGameStarted()
                     continue
+                # See if it's a timeout.
+                uptime = self.vm.GetUptime()
+                if uptime is not None and uptime > self.scenario['startupLimit']:
+                    logging.warn("Game %s's VM exceeded startup limit, resetting it."%self.gameName)
+                    self.state = GameState.GAME_RECREATING
+                    continue
+                
                 # If agent is responsive, then we don't have to check the VM.
                 # Wait and try again.
                 time.sleep(0.5)
@@ -243,7 +288,7 @@ class Game:
                         self.state = GameState.GAME_REBOOTING2
                     continue
             
-            if self.state == GameState.GAME_DESTROYING:
+            if self.state == GameState.GAME_DESTROYING or self.state == GameState.GAME_RECREATING:
                 # Shutdown the VM and reset the guest agent.
                 self.agent.ResetConnection()
                 if self.vm.GetState() == VM.VMState.RUNNING:
@@ -260,11 +305,17 @@ class Game:
                         logging.error("Failed to destroy VM")
                         self.state = GameState.GAME_ERROR
                         continue
-                    # VM's cleaned up, let's get the event handlers off.
-                    with self.eventCallbackSetLock:
-                        for cb in self.eventCallbackSet:
-                            cb(None)
-                    self.state = GameState.GAME_DESTROYED
+                    if self.state == GameState.GAME_RECREATING:
+                        # We're done, restart the game/VM.
+                        self.state = GameState.GAME_STARTING1
+                        self.vm = self.vmManager.CreateVM(self.scenario['vmPath'], self.scenarioName)
+                        continue
+                    else:
+                        # VM's cleaned up, let's get the event handlers off.
+                        with self.eventCallbackSetLock:
+                            for cb in self.eventCallbackSet:
+                                cb(None)
+                        self.state = GameState.GAME_DESTROYED
                     
     
     def StopGameFunc(self):
@@ -299,6 +350,8 @@ class Game:
         self.users[username]["pid"] = -1 # Not available yet.
         self.users[username]["pidUp"] = False # User's pid up when we last check?
         self.users[username]["portUp"] = False # User's port up when we last check?
+        self.users[username]["lastCmd"] = 0.0
+        self.users[username]["lastSC"] = 0.0
 
         return KOFErrorCode.ERROR_NONE
     
@@ -324,6 +377,21 @@ class Game:
         return result
 
     def Shutdown(self):
+        # Exit game task thread first
+        self.gameTaskExit = True
+        # Wait for it to terminate
+        self.gameTask.result()
+
+        # Clear all closures and event handlers
+        with self.gameTaskClosuresLock:
+            for c in self.gameTaskClosures:
+                c()
+            self.gameTaskClosures = []
+        with self.eventCallbackSetLock:
+            for cb in self.eventCallbackSet:
+                cb(None)
+                
+        # Reset VM state.
         self.state = GameState.GAME_ERROR
         if self.vm.GetState() == VM.VMState.RUNNING:
             result = self.vm.Shutdown()
@@ -335,9 +403,7 @@ class Game:
             if not result:
                 logging.error("Failed to destroy VM during shutdown")
                     
-        self.gameTaskExit = True
-        # Wait for it to terminate
-        self.gameTask.result()
+
 
     @staticmethod
     def LoadScenario(scenarioName):

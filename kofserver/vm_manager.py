@@ -59,6 +59,12 @@ class VM():
         # This is the time at which VM is started. It'll be None if VM is not running.
         self.vmStartupTime = None
     
+    def GetUptime(self):
+        if self.vmStartupTime is None:
+            logging.warn("Querying for uptime when it's not running")
+            return None
+        return time.time() - self.vmStartupTime
+
     def _GetType(self):
         return self.vmConf['vmType']
     

@@ -162,6 +162,10 @@ class IRC(pydle.Client):
             reason = IRC.Reason2Str(evt.gainReason)
             msg = "Player %s's %s is down! Too bad for him/her/them!"%(evt.playerName, reason)
             await self.message(self.channel, msg)
+        
+        if evt.eventType == GameEventType.PROC_OUTPUT:
+            msg = "PID %d: %s"%(evt.info.pid, IRC.SanitizeString(evt.procOutput.decode('utf8', 'backslashreplace')))
+            await self.message(self.channel, msg)
 
     # TODO: Move this somewhere else?
     @staticmethod
@@ -217,11 +221,15 @@ class IRC(pydle.Client):
             return errMsg
         cmd = message[idx+1:]
         result = self.agent.PlayerIssueCmd(gameName, nick, cmd)
-        if result.reply.error != KOFErrorCode.ERROR_NONE:
-            errMsg = "Run command failed, error code %s"%(str(result.reply.error),)
-        else:
+        if result.reply.error == KOFErrorCode.ERROR_NONE:
             # No message for success, for now.
             errMsg = None
+        elif result.reply.error == KOFErrorCode.ERROR_GAME_NOT_RUNNING:
+            errMsg = "Game is not running."
+        elif result.reply.error == KOFErrorCode.ERROR_COOLDOWN:
+            errMsg = "You need to cool down."
+        else:
+            errMsg = "Run command failed, error code %s"%(str(result.reply.error),)
         return errMsg
 
     def GetScoreBoard(self):
@@ -233,4 +241,12 @@ class IRC(pydle.Client):
             msg.append('%s\t%d'%(s.playerName, s.score))
         return msg
 
-            
+    def SanitizeString(s):
+        allowedStr = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ~!@#$%^&*()-_=+?<>.,[]{}|'
+        resList = []
+        for c in s:
+            if allowedStr.find(c) != -1:
+                resList.append(c)
+            else:
+                resList.append("\\x%02x"%(ord(c),))
+        return ''.join(resList)

@@ -11,6 +11,15 @@ pidScorePerSec: 1.0
 allowShellcode: True
 allowCommand: True
 
+CmdCooldown: 15.0
+allowStdout: True
+
+RandomReboot: False
+RandomRebootMin: 180.0
+RandomRebootMax: 60.0
+
+startupLimit: 120.0
+
 # $vmPath/vm.yml
 # vmType: "shellscript"
 # $vmPath/init.sh <VM Name>
