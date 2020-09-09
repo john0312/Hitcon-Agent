@@ -31,6 +31,7 @@ import threading
 
 import kofserver_pb2, kofserver_pb2_grpc
 from kofserver_pb2 import GameState
+from kofserver_pb2 import GameEventType
 from kofserver_pb2 import ErrorCode as KOFErrorCode
 from guest_agent_pb2 import ErrorCode as GuestErrorCode
 from vm_manager import VMManager, VM
@@ -108,7 +109,7 @@ class Game:
         # TODO: Event filtering?
         filteredEvents = []
         for evt in evts:
-            if evt == PROC_OUTPUT and not self.scenario['allowStdout']:
+            if evt == GameEventType.PROC_OUTPUT and not self.scenario['allowStdout']:
                 # Filtered
                 continue
             filteredEvents.append(evt)
@@ -170,7 +171,7 @@ class Game:
             logging.warning("Executing command '%s' failed due to agent problem %s."%(cmd, res.reply.error))
             return KOFErrorCode.ERROR_AGENT_PROBLEM
         self.SetPlayerPID(playerName, res.pid)
-        self.users[playername]["lastCmd"] = time.time()
+        self.users[playerName]["lastCmd"] = time.time()
         return KOFErrorCode.ERROR_NONE
 
     def SetPlayerPID(self, playerName, pid):

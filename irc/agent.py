@@ -72,7 +72,7 @@ class Agent:
             print("Start game failed: %s"%(str(reply.error),))
 
     def DestroyGame(self, gameName):
-        req = kofserver_pb2.DestroyGame(gameName=gameName)
+        req = kofserver_pb2.DestroyGameReq(gameName=gameName)
         reply = self.stub.DestroyGame(req)
         if reply.error == KOFErrorCode.ERROR_NONE:
             print("Destroy game successful")
