@@ -176,6 +176,9 @@ message DestroyGameReq {
 message QueryGameReq {
   // Leave empty to list all games.
   string gameName = 1;
+
+  // If true, the reply's games will only contain gameName.
+  bool lite = 2;
 }
 
 message QueryGameRep {
