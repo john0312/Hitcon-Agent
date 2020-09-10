@@ -1,0 +1,28 @@
+# Path to our VM configuration
+vmPath: "vm.yml"
+
+ip: "192.168.122.24"
+pidCheckInterval: 5.0
+portCheckInterval: 5.0
+
+portScorePerSec: 20.0
+pidScorePerSec: 0.0
+
+allowShellcode: True
+allowCommand: True
+
+CmdCooldown: 15.0
+allowStdout: True
+allowCreateEvent: True
+allowTerminateEvent: True
+
+RandomReboot: True
+RandomRebootMin: 90.0
+RandomRebootMax: 120.0
+RandomRebootOffset: 60.0
+
+disableCmdAfter: False
+
+startupLimit: 120.0
+
+description: '蹦蹦跳跳：1. 時不時隨機重開機，你的後門能Survive Reboot嗎？2. 可上網，可以直接執行指令。3. Port存活每秒20分。'
