@@ -1,0 +1,7 @@
+vmType: "shellscript"
+
+shellscript:
+    init: "init.sh"
+    boot: "boot.sh"
+    shutdown: "shutdown.sh"
+    destroy: "destroy.sh"

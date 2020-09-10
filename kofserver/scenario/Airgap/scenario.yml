@@ -1,0 +1,28 @@
+# Path to our VM configuration
+vmPath: "vm.yml"
+
+ip: "192.168.122.23"
+pidCheckInterval: 5.0
+portCheckInterval: 5.0
+
+portScorePerSec: 20.0
+pidScorePerSec: 0.0
+
+allowShellcode: True
+allowCommand: True
+
+CmdCooldown: 60.0
+allowStdout: True
+allowCreateEvent: True
+allowTerminateEvent: True
+
+RandomReboot: False
+RandomRebootMin: 30.0
+RandomRebootMax: 60.0
+RandomRebootOffset: 60.0
+
+disableCmdAfter: False
+
+startupLimit: 120.0
+
+description: 'Airgap：1. 不能上網，所有操作都需要透過IRC。類似攻擊Air-gapped的目標，只有一個不怎麼完善的溝通管道。 2. 可以直接執行指令。3. Port存活每秒20分。4. 每個指令需要CD 60秒，省著點用吧'
