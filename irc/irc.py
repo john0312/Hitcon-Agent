@@ -120,6 +120,9 @@ class IRC(pydle.Client):
         return None
 
     def GetCurrentGame(self):
+        if self.gameName is None:
+            return "No game is currently running"
+
         result = self.agent.QueryGame(self.gameName)
         if result.reply.error != KOFErrorCode.ERROR_NONE:
             logging.error("GetCurrentGame QueryGame result: %s"%(str(result.reply.error),))
