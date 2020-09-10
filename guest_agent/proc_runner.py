@@ -111,7 +111,7 @@ class ProcRunner:
         if Config.conf()['procRunner'] != "":
             cmdAndArgs = [Config.conf()['procRunner'],] + cmdAndArgs
         try:
-            process = subprocess.Popen(cmdAndArgs, shell=True, stdout=subprocess.PIPE)
+            process = subprocess.Popen(cmdAndArgs, shell=Config.conf()['useShell'], stdout=subprocess.PIPE)
             ProcRunner.MakeNonBlocking(process.stdout)
             process.stdoutReadTotal = 0
         except Exception:
