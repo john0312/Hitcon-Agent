@@ -1,10 +1,11 @@
 <template>
     <v-card>
         <v-tabs
-            background-color="deep-purple accent-4"
-            centered
-            dark
-            icons-and-text
+          dark
+          background-color="teal darken-3"
+          fixed-tabs
+          show-arrows
+          icons-and-text
         >
             <v-tabs-slider></v-tabs-slider>
             <v-tab v-for="(name, index) of nameList" :key="index" :href="'/#/'+name" @click="tabClickEvent(name)">

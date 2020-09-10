@@ -23,7 +23,9 @@ SOFTWARE. -->
   <v-snackbar
     :timeout="3000"
     bottom
+    :multi-line="true"
     v-model="snackbar.visible"
+    :auto-height="true"
   >
     {{ snackbar.text }}
   </v-snackbar>
@@ -41,6 +43,7 @@ export default {
   data() {
     return {
       snackbar: {
+        multiLine: true,
         visible: false,
         text: '',
       },

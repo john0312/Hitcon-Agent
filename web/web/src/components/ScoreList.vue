@@ -22,7 +22,7 @@ SOFTWARE. -->
 <template>
   <v-card>
     <v-card-title>
-      <h1>Ranking List</h1>
+      <h1 style="padding-top: 12px; margin-top: 4px;">Ranking List</h1>
       <v-spacer></v-spacer>
       <v-text-field
         v-model="search"
