@@ -58,15 +58,16 @@ class IRC(pydle.Client):
             if reply is not None:
                 await self.message(target, reply)
         
+        if self.gameName == None or self.scenario == None:
+            return
+
         if message.startswith("Scoreboard") == True:
-            replies = self.GetScoreBoard()
+            replies = self.GetScoreBoard(self.gameName)
             for r in replies:
                 await self.message(target, r)
             return
 
         # Admin can play too
-        if self.gameName == None or self.scenario == None:
-            return
         if nick not in self.userSet:
             registerMsg = self.PlayerRegister(self.gameName, nick)
             await self.message(target, registerMsg)
@@ -232,8 +233,8 @@ class IRC(pydle.Client):
             errMsg = "Run command failed, error code %s"%(str(result.reply.error),)
         return errMsg
 
-    def GetScoreBoard(self):
-        result = self.agent.QueryScore("", "")
+    def GetScoreBoard(self, gameName):
+        result = self.agent.QueryScore(gameName, "")
         if result.reply.error != KOFErrorCode.ERROR_NONE:
             return ["Failed to query score, error code %s"%(str(result.reply.error),),]
         msg = []
