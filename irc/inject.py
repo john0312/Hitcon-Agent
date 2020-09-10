@@ -19,13 +19,35 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-all: kofserver_pb2.py irc_pb2.py
+# This is a simple client for testing the guest agent.
 
-kofserver_pb2.py: ../kofserver/kofserver.proto
-	python -m grpc_tools.protoc -I../kofserver --python_out=. --grpc_python_out=. kofserver.proto
 
-irc_pb2.py: irc.proto
-	python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. irc.proto
+import logging
+import os
+import argparse
+import grpc
+from concurrent import futures
 
-clean:
-	rm -f kofserver_pb2.py kofserver_pb2_grpc.py irc_pb2.py irc_pb2_grpc.py
+import irc_pb2, irc_pb2_grpc
+
+def main():
+    # Setup logging
+    logging.basicConfig(level=logging.INFO)
+
+    parser = argparse.ArgumentParser(description='IRC Injector client.')
+    # gRPC connection details
+    parser.add_argument('--host', type=str, default='127.0.0.1', help='The host to connect to')
+    parser.add_argument('--port', type=int, default=29130, help='The port to connect to')
+
+    # Commands 
+    parser.add_argument('--msg', type=str, help='Action to carry out.')
+
+    args = parser.parse_args()
+    with grpc.insecure_channel('%s:%d'%(args.host, args.port)) as channel:
+        stub = irc_pb2_grpc.CmdInjectorStub(channel)
+
+        req = irc_pb2.InjectReq(msg=args.msg)
+        stub.Inject(req)
+        
+if __name__ == "__main__":
+    main()

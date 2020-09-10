@@ -108,6 +108,8 @@ class ProcRunner:
                 self.procList = remaining
 
     def RunCmd(self, cmdAndArgs):
+        if Config.conf()['procRunner'] != "":
+            cmdAndArgs = [Config.conf()['procRunner'],] + cmdAndArgs
         try:
             process = subprocess.Popen(cmdAndArgs, shell=True, stdout=subprocess.PIPE)
             ProcRunner.MakeNonBlocking(process.stdout)

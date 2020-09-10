@@ -65,6 +65,9 @@ class Game:
         self.gameTaskExit = False
         self.gameTask = executor.submit(Game._GameFunc, self)
 
+        # Record the time at which the game first started.
+        self.gameStartupTime = None
+
         # Create the guest agent proxy.
         self.agent = GuestAgent(self.executor, self.GetIP())
 
@@ -118,6 +121,14 @@ class Game:
                 for evt in filteredEvents:
                     cb(evt)
 
+    # Should only be called from the game thread.
+    def _TriggerReboot(self):
+        self.agent.ResetConnection()
+        self.state = GameState.GAME_REBOOTING1
+        evt = kofserver_pb2.GameEvent(eventType=kofserver_pb2.GameEventType.GAME_REBOOT)
+        self.EmitGameEvents([evt,])
+        self.rebootTime = None
+                    
     # Start the game.
     def Start(self):
         # Set it to we are starting.
@@ -166,6 +177,9 @@ class Game:
         if self.users[playerName]["lastCmd"]+self.scenario["CmdCooldown"]>time.time():
             logging.info("Player %s need to cooldown before running command."%(playerName,))
             return KOFErrorCode.ERROR_COOLDOWN
+        if self.scenario["disableCmdAfter"] is not None and self.scenario["disableCmdAfter"] < self.GameUptime():
+            logging.info("Player %s tries to run command after door closed."%(playerName,))
+            return KOFErrorCode.ERROR_DOOR_CLOSED
         res = self.agent.RunCmd(cmd)
         if res.reply.error != GuestErrorCode.ERROR_NONE:
             logging.warning("Executing command '%s' failed due to agent problem %s."%(cmd, res.reply.error))
@@ -182,6 +196,8 @@ class Game:
     # Return the Game protobuf for this game.
     def GetGameProto(self):
         result = kofserver_pb2.Game(name=self.gameName, state=self.state)
+        result.scenarioName = self.scenarioName
+        result.scenarioYML = yaml.dump(self.scenario)
         return result
     
     def _GameFunc(self):
@@ -191,6 +207,12 @@ class Game:
             self._GameFuncReal()
         except Exception:
             logging.exception("Exception in GameFunc")
+
+    # Return the duration that the game is running.
+    def GameUptime(self):
+        if self.gameStartupTime is None:
+            return None
+        return time.time() - self.gameStartupTime
 
     def _GameFuncReal(self):
         logging.info("GameFunc for %s running"%(self.gameName,))
@@ -211,6 +233,7 @@ class Game:
                 continue
             
             if self.state == GameState.GAME_STARTING1:
+                self.rebootTime = None
                 if self.vm.GetState() == VM.VMState.CREATED:
                     # Init and start the VM
                     res = self.vm.Init()
@@ -241,7 +264,11 @@ class Game:
                     # It's connected, so we can move onto the started state
                     logging.info("Agent for Game %s is ready."%(self.gameName,))
                     self.state = GameState.GAME_RUNNING
+                    evt = kofserver_pb2.GameEvent(eventType=kofserver_pb2.GameEventType.GAME_STARTED)
+                    self.EmitGameEvents([evt,])
                     self.scorer.NotifyGameStarted()
+                    if self.gameStartupTime is None:
+                        self.gameStartupTime = time.time()
                     continue
                 # See if it's a timeout.
                 uptime = self.vm.GetUptime()
@@ -256,20 +283,35 @@ class Game:
                 continue
             
             if self.state == GameState.GAME_RUNNING:
+                # Generate the random reboot time.
+                if self.scenario['RandomReboot'] and self.rebootTime is None and (self.scenario['RandomRebootOffset'] < self.GameUptime()):
+                    delay = random.uniform(self.scenario['RandomRebootMin'], self.scenario['RandomRebootMax'])
+                    self.rebootTime = time.time() + delay
+                    logging.info("Setting reboot time: %g"%(delay,))
+                # Reboot?
+                if self.rebootTime is not None:
+                    if self.rebootTime < time.time():
+                        logging.info("Rebooting due to scenario")
+                        self._TriggerReboot()
+                        continue
+
                 playerScored = self.scorer.TryScorePlayers()
                 if not playerScored:
-                    # Maybe it's disconnected?
-                    if not self.agent.CheckAlive():
-                        # It's down.
-                        if self.state == GameState.GAME_RUNNING:
-                            logging.error("Game rebooting due to dead agent")
-                            self.state = GameState.GAME_REBOOTING1
-                        else:
-                            logging.error("Game agent dead but game state = %s"%(str(self.state),))
-                        continue
-                    # Don't stress it too much otherwise.
+                    # Don't stress it too much.
                     time.sleep(0.3)
-            
+                    self.agent.CheckAlive()
+                
+                # Maybe it's disconnected?
+                if not self.agent.IsAlive():
+                    # It's down.
+                    if self.state == GameState.GAME_RUNNING:
+                        logging.error("Game rebooting due to dead agent")
+                        self._TriggerReboot()
+                    else:
+                        logging.error("Game agent dead but game state = %s"%(str(self.state),))
+                    continue
+                    
+
             if self.state == GameState.GAME_REBOOTING1:
                 if self.vm.GetState() == VM.VMState.RUNNING:
                     # VM is running, shut it down.

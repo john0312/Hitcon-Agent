@@ -20,11 +20,21 @@
 # SOFTWARE.
 
 import logging
+import grpc
 from concurrent import futures
 
 from irc import IRC
 from agent import Agent
 from config import Config
+import irc_pb2_grpc, irc_pb2
+class CmdInjector:
+    def __init__(self, executor, irc):
+        self.executor = executor
+        self.irc = irc
+    
+    def Inject(self, request, context):
+        self.irc.InjectCommand(request.msg)
+        return irc_pb2.InjectRep()
 
 # TODO: Enhance performance
 def main():
@@ -43,6 +53,14 @@ def main():
     irc.SetChannel(Config.conf()['channel'])
     irc.ResetGame()
     irc.SetAgent(agent)
+
+    # grpc
+    injector = CmdInjector(executor, irc)
+    server = grpc.server(executor)
+    irc_pb2_grpc.add_CmdInjectorServicer_to_server(injector, server)
+    server.add_insecure_port('[::]:29130')
+    server.start()
+
     irc.run(hostname=Config.conf()['ircServer'], port=Config.conf()['ircSSLPort'], tls=True, tls_verify=False)
 
 if __name__ == '__main__':

@@ -48,8 +48,11 @@ message Game {
   // State of the game.
   GameState state = 2;
 
+  // Scenario Name
+  string scenarioName = 3;
+
   // Scenario YML
-  string scenarioYML = 3;
+  string scenarioYML = 4;
 }
 
 // PlayerScore reports the various score of a user.
@@ -96,6 +99,8 @@ enum GameEventType {
   PLAYER_START_GAIN = 4; // Player starts to gain points.
   PLAYER_STOP_GAIN = 5; // Player stops gaining points.
   PROC_OUTPUT = 6;
+  GAME_REBOOT = 7;
+  GAME_STARTED = 8;
 }
 
 // ProcInfo holds the information regarding a process
@@ -150,6 +155,7 @@ enum ErrorCode {
   ERROR_PLAYER_NOT_FOUND = 10; // Player's not found.
   ERROR_INCORRECT_STATE = 11; // Incorrect state when trying to start or destroy game.
   ERROR_COOLDOWN = 12; // Player need to cool down.
+  ERROR_DOOR_CLOSED = 13; // Scenario disallow command after certain time.
 }
 
 // Rep (Reply) is a generic response for RPC calls that uses it.

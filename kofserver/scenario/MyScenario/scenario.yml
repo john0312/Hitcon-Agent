@@ -15,10 +15,15 @@ CmdCooldown: 15.0
 allowStdout: True
 
 RandomReboot: False
-RandomRebootMin: 180.0
+RandomRebootMin: 30.0
 RandomRebootMax: 60.0
+RandomRebootOffset: 60.0
+
+disableCmdAfter: 150.0
 
 startupLimit: 120.0
+
+description: 'Base Ubuntu 18.04 Scenario'
 
 # $vmPath/vm.yml
 # vmType: "shellscript"

@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 import logging
+import asyncio
 import grpc
 from config import Config
 import kofserver_pb2, kofserver_pb2_grpc
@@ -79,6 +80,10 @@ class Agent:
         else:
             print("Destroy game failed: %s"%(str(reply.error),))
     
+    def QueryGame(self, gameName):
+        req = kofserver_pb2.QueryGameReq(gameName=gameName)
+        reply = self.stub.QueryGame(req)
+        return reply
     def PlayerRegister(self, gameName, playerName):
         req = kofserver_pb2.PlayerRegisterReq(gameName=gameName, playerName=playerName)
         reply = self.stub.PlayerRegister(req)
@@ -98,9 +103,11 @@ class Agent:
         else:
             print("Player Issue Command failed: %s"%(str(reply.reply.error),))
     
-    def PlayerIssueCmd(self, gameName, playerName, cmd):
+    async def PlayerIssueCmd(self, gameName, playerName, cmd):
         req = kofserver_pb2.PlayerIssueCmdReq(gameName=gameName, playerName=playerName, cmd=cmd)
-        return self.stub.PlayerIssueCmd(req)
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(self.executor, lambda: self.stub.PlayerIssueCmd(req))
+        return result
 
     def QueryScore(self, gameName, playerName):
         req = kofserver_pb2.QueryScoreReq(gameName=gameName, playerName=playerName)

@@ -119,6 +119,9 @@ class GuestAgent:
             logging.info('Bad guest agent at %s:%d'%(host, port))
         return result
 
+    def IsAlive(self):
+        return self.stub is not None
+
     # CheckAlive checks if the guest agent is responsive.
     def CheckAlive(self):
         if self.stub is None or self.channel is None:
