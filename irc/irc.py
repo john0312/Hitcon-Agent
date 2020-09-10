@@ -68,7 +68,7 @@ class IRC(pydle.Client):
                 await self.message(target, reply)
         
         if message.startswith("Scoreboard") == True:
-            replies = self.GetScoreBoard()
+            replies = await self.GetScoreBoard()
             for r in replies:
                 await self.message(target, r)
             return
@@ -284,8 +284,10 @@ class IRC(pydle.Client):
             errMsg = "Run command failed, error code %s"%(str(result.reply.error),)
         return errMsg
 
-    def GetScoreBoard(self):
-        result = self.agent.QueryScore("", "")
+    async def GetScoreBoard(self):
+        if self.gameName is None:
+            return "Game not running"
+        result = await self.agent.QueryScore(self.gameName, "")
         if result.reply.error != KOFErrorCode.ERROR_NONE:
             return ["Failed to query score, error code %s"%(str(result.reply.error),),]
         msg = []

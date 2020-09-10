@@ -109,6 +109,8 @@ class Agent:
         result = await loop.run_in_executor(self.executor, lambda: self.stub.PlayerIssueCmd(req))
         return result
 
-    def QueryScore(self, gameName, playerName):
+    async def QueryScore(self, gameName, playerName):
         req = kofserver_pb2.QueryScoreReq(gameName=gameName, playerName=playerName)
-        return self.stub.QueryScore(req)
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(self.executor, lambda: self.stub.QueryScore(req))
+        return result
