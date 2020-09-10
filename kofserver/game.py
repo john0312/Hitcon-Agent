@@ -112,13 +112,13 @@ class Game:
         # TODO: Event filtering?
         filteredEvents = []
         for evt in evts:
-            if evt == GameEventType.PROC_OUTPUT and not self.scenario['allowStdout']:
+            if evt.eventType == GameEventType.PROC_OUTPUT and not self.scenario['allowStdout']:
                 # Filtered
                 continue
-            if evt == GameEventType.PROC_CREATE and not self.scenario['allowCreateEvent']:
+            if evt.eventType == GameEventType.PROC_CREATE and not self.scenario['allowCreateEvent']:
                 # Filtered
                 continue
-            if evt == GameEventType.PROC_TERMINATE and not self.scenario['allowTerminateEvent']:
+            if evt.eventType == GameEventType.PROC_TERMINATE and not self.scenario['allowTerminateEvent']:
                 # Filtered
                 continue
             filteredEvents.append(evt)
