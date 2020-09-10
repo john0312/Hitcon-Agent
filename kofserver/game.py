@@ -177,7 +177,7 @@ class Game:
         if self.users[playerName]["lastCmd"]+self.scenario["CmdCooldown"]>time.time():
             logging.info("Player %s need to cooldown before running command."%(playerName,))
             return KOFErrorCode.ERROR_COOLDOWN
-        if self.scenario["disableCmdAfter"] is not None and self.scenario["disableCmdAfter"] < self.GameUptime():
+        if self.scenario["disableCmdAfter"] is not False and self.scenario["disableCmdAfter"] < self.GameUptime():
             logging.info("Player %s tries to run command after door closed."%(playerName,))
             return KOFErrorCode.ERROR_DOOR_CLOSED
         res = self.agent.RunCmd(cmd)
