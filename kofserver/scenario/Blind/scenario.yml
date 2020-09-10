@@ -1,0 +1,28 @@
+# Path to our VM configuration
+vmPath: "vm.yml"
+
+ip: "192.168.122.22"
+pidCheckInterval: 5.0
+portCheckInterval: 5.0
+
+portScorePerSec: 20.0
+pidScorePerSec: 0.0
+
+allowShellcode: True
+allowCommand: True
+
+CmdCooldown: 15.0
+allowStdout: False
+allowCreateEvent: False
+allowTerminateEvent: False
+
+RandomReboot: False
+RandomRebootMin: 30.0
+RandomRebootMax: 60.0
+RandomRebootOffset: 60.0
+
+disableCmdAfter: False
+
+startupLimit: 120.0
+
+description: '瞎子摸象：1. 所有Process創立與結束都不會顯示。 2. 程式執行結果也不會顯示。 3. 通通看不見，玩家需要盲Inject Reverse Shell. 4. 可對外連網。5. 可以直接執行指令。6. Port存活每秒20分'
