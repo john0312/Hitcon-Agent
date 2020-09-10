@@ -1,0 +1,26 @@
+# Path to our VM configuration
+vmPath: "vm.yml"
+
+ip: "192.168.122.11"
+pidCheckInterval: 5.0
+portCheckInterval: 5.0
+
+portScorePerSec: 5.0
+pidScorePerSec: 1.0
+
+allowShellcode: True
+allowCommand: True
+
+CmdCooldown: 15.0
+allowStdout: True
+
+RandomReboot: False
+RandomRebootMin: 30.0
+RandomRebootMax: 60.0
+RandomRebootOffset: 60.0
+
+disableCmdAfter: False
+
+startupLimit: 120.0
+
+description: '新手村：1. Process存活每秒1分，Port可以被連線每秒5分。可對外連網。2. 可以直接執行指令。3. 友善新手，請不要太頻繁的獵殺別人的Process。4. 這場保留最久，原則上不刪除檔案，請多利用塗鴉區 (新手村中伺服器有跑一台http server，詳見/var/www/html)。'
