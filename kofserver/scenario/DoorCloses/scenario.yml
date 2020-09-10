@@ -1,0 +1,28 @@
+# Path to our VM configuration
+vmPath: "vm.yml"
+
+ip: "192.168.122.21"
+pidCheckInterval: 5.0
+portCheckInterval: 5.0
+
+portScorePerSec: 20.0
+pidScorePerSec: 0.0
+
+allowShellcode: True
+allowCommand: True
+
+CmdCooldown: 15.0
+allowStdout: True
+allowCreateEvent: True
+allowTerminateEvent: True
+
+RandomReboot: False
+RandomRebootMin: 30.0
+RandomRebootMax: 60.0
+RandomRebootOffset: 60.0
+
+disableCmdAfter: 60
+
+startupLimit: 120.0
+
+description: '關門放狗：1. 10分鐘內可以執行指令 2. 10分鐘後將不能透過IRC執行指令 3. 目標是玩家必須要擁有後門 4. Port可以被連線每秒20分。可對外連網。'
