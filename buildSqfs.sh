@@ -37,7 +37,7 @@ cp -pR guest_agent/* "${tmpDir}/." || die "Failed to copy guest agent"
 if ! [[ -d "$extra" ]]; then
     echo "$extra not directory, ignoring"
 else
-    cp -pR "${extra}/*" "${tmpDir}/." || die "Failed to copy extra files"
+    cp -pR "${extra}/"* "${tmpDir}/." || die "Failed to copy extra files"
 fi
 
 rm -rf "${tmpDir}/__pycache__"
