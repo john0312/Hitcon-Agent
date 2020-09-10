@@ -84,8 +84,8 @@ class IRC(pydle.Client):
             msg = await self.PlayerIssueCmd(self.gameName, nick, message)
             if msg is not None:
                 await self.message(target, msg)
-        elif message.startswith("Shellcode ") == True:
-            self.PlayerIssueSC(self.gameName, nick, message)
+        #elif message.startswith("Shellcode ") == True:
+        #    self.PlayerIssueSC(self.gameName, nick, message)
         elif message == "CurrentGame":
             msg = self.GetCurrentGame()
             if msg is not None:
