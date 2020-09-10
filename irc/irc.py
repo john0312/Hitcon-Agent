@@ -280,8 +280,10 @@ class IRC(pydle.Client):
             errMsg = "Game is not running."
         elif result.reply.error == KOFErrorCode.ERROR_COOLDOWN:
             errMsg = "You need to cool down."
+        elif result.reply.error == KOFErrorCode.ERROR_DOOR_CLOSED:
+            errMsg = "Too bad! Door is closed!"
         else:
-            errMsg = "Run command failed, error code %s"%(str(result.reply.error),)
+            errMsg = "Run command failed, error code %s"%(KOFErrorCode.Name(result.reply.error),)
         return errMsg
 
     async def GetScoreBoard(self):
