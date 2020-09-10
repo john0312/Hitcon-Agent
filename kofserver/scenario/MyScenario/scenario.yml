@@ -13,6 +13,8 @@ allowCommand: True
 
 CmdCooldown: 15.0
 allowStdout: True
+allowCreateEvent: True
+allowTerminateEvent: True
 
 RandomReboot: False
 RandomRebootMin: 30.0

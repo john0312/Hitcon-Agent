@@ -115,6 +115,12 @@ class Game:
             if evt == GameEventType.PROC_OUTPUT and not self.scenario['allowStdout']:
                 # Filtered
                 continue
+            if evt == GameEventType.PROC_CREATE and not self.scenario['allowCreateEvent']:
+                # Filtered
+                continue
+            if evt == GameEventType.PROC_TERMINATE and not self.scenario['allowTerminateEvent']:
+                # Filtered
+                continue
             filteredEvents.append(evt)
         with self.eventCallbackSetLock:
             for cb in self.eventCallbackSet:
