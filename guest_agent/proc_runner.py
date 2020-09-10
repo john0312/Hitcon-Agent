@@ -86,10 +86,11 @@ class ProcRunner:
                         out = p.stdout.read()
                     except IOError:
                         # Whatever.
-                        out = []
+                        pass
                     except:
-                        out = []
                         logging.exception("Problem reading from process")
+                    if out is None:
+                        out = b''
                     if p.stdoutReadTotal < Config.conf()['procReadLimit']:
                         # We'll still deliver the message.
                         p.stdoutReadTotal += len(out)
