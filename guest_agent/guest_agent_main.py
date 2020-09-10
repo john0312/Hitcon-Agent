@@ -37,7 +37,7 @@ def main():
     Config.Init()
 
     # Create the executor that we'll run the server from.
-    executor = futures.ThreadPoolExecutor(max_workers=8)
+    executor = futures.ThreadPoolExecutor(max_workers=12)
 
     # Create the server adaptor instance.
     procWatcher = ProcWatcher(executor)

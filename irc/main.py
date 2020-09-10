@@ -35,7 +35,7 @@ def main():
     Config.Init()
 
     # Initialize agent
-    executor = futures.ThreadPoolExecutor(max_workers=8)
+    executor = futures.ThreadPoolExecutor(max_workers=32)
     agent = Agent(executor)
 
     # Initialize IRC

@@ -42,7 +42,7 @@ def main():
     vmManager = vm_manager.VMManager()
 
     # Create the executor that we'll run the server from.
-    executor = futures.ThreadPoolExecutor(max_workers=4)
+    executor = futures.ThreadPoolExecutor(max_workers=32)
     # Create the server adaptor instance.
     kofservicer = kofserver.KOFServer(executor, vmManager)
 
