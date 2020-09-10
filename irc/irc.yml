@@ -4,10 +4,13 @@ agentPort: 29110
 agentConnectTimeout: 3.0
 
 # IRC
-ircServer: "10.8.66.208"
+ircServer: "10.8.66.1"
 channel: "#hitcon2020mpgtest2"
 botNickName: "hitcon2020mpgbot2"
 ircPort: 6667
 ircSSLPort: 6697
 bufferSize: 4096
-admin: "john0312"
+admin:
+    - "john0312"
+    - "john0312a"
+    - "john0312b"

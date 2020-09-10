@@ -43,7 +43,7 @@ class IRC(pydle.Client):
     
     async def _InjectCommandReal(self, msg):
         await self.message(self.channel, "Admin: %s"%msg)
-        await self.on_message(self.channel, Config.conf()["admin"], msg)
+        await self.on_message(self.channel, Config.conf()["admin"][0], msg)
 
     async def on_message(self, target, nick, message):
         if nick == self.nickname:
@@ -94,7 +94,10 @@ class IRC(pydle.Client):
             pass
 
     def _IsAdmin(self, nick):
-        return nick == Config.conf()["admin"]
+        for n in Config.conf()["admin"]:
+            if n == nick:
+                return True
+        return False
 
     def SetChannel(self, channel):
         self.channel = channel
