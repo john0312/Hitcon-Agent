@@ -1,0 +1,28 @@
+# Path to our VM configuration
+vmPath: "vm.yml"
+
+ip: "192.168.122.25"
+pidCheckInterval: 5.0
+portCheckInterval: 5.0
+
+portScorePerSec: 20.0
+pidScorePerSec: 0.0
+
+allowShellcode: True
+allowCommand: True
+
+CmdCooldown: 30.0
+allowStdout: True
+allowCreateEvent: True
+allowTerminateEvent: True
+
+RandomReboot: False
+RandomRebootMin: 30.0
+RandomRebootMax: 60.0
+RandomRebootOffset: 60.0
+
+disableCmdAfter: False
+
+startupLimit: 120.0
+
+description: '你全家都Root：1. 所有指令都以Root執行 2. 可以直接執行指令跟上網。3. Port存活每秒20分。4. 每個指令需要CD 30秒，省著點用吧。5. 拜託不要把伺服器玩壞'
