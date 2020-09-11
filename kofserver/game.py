@@ -196,6 +196,9 @@ class Game:
 
     def SetPlayerPID(self, playerName, pid):
         assert playerName in self.users
+        if 'pid' in self.users[playerName]:
+            prevPID = self.users[playerName]
+            del self.pidToUser[pid]
         self.users[playerName]['pid'] = pid
         self.pidToUser[pid] = playerName
 
