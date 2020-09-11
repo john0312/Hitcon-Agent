@@ -1,0 +1,35 @@
+{
+  "name": "Hitcon-Web",
+  "version": "1.0.0",
+  "license": "MIT",
+  "description": "",
+  "author": "",
+  "main": "server.js",
+  "private": false,
+  "scripts": {
+    "start": "node server.js",
+    "lint": "eslint --fix"
+  },
+  "dependencies": {
+    "express": "4.17.1",
+    "js-yaml": "3.14.0",
+    "node-grpc-client": "1.4.0",
+    "socket.io": "2.0.4",
+    "sprintf-js": "1.1.2"
+  },
+  "devDependencies": {
+    "eslint": "^7.8.1",
+    "eslint-config-airbnb-base": "^14.2.0",
+    "eslint-config-standard": "11.0.0",
+    "eslint-plugin-import": "^2.22.0"
+  },
+  "engines": {
+    "node": ">= 6.0.0",
+    "npm": ">= 3.0.0"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not ie <= 8"
+  ]
+}

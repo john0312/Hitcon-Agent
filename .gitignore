@@ -13,3 +13,6 @@ venv/
 # Protobufs
 *_pb2.py
 *_pb2_grpc.py
+
+# Javascript lib
+node_modules

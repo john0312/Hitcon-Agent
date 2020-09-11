@@ -1,0 +1,24 @@
+{
+  "webServerPort": 8080,
+  "protoPath": "../../../kofserver/kofserver.proto",
+  "kofServer": "0.0.0.0:9090",
+  "packageService": "kofserver", 
+  "theService": "KOFServer",
+  "queryScoreIntervalMillisecond": 5000,
+  "gameFile": "../config/game.yml",
+  "message": {
+    "mode": "en",
+    "zh-cn": {
+      "PROC_CREATE": "PID %d (%s) %s 創建， 666！",
+      "PROC_TERMINATE": "PID %d (%s) %s 終止！",
+      "PLAYER_START_GAIN": "玩家 %s 的 %s 正在運行! 快點來人Kill它阿!",
+      "PLAYER_STOP_GAIN": "玩家 %s 的 %s 終止! 幫復啊!"
+    },
+    "en": {
+      "PROC_CREATE": "PID %d (%s) %s created",
+      "PROC_TERMINATE": "PID %d (%s) %s terminated",
+      "PLAYER_START_GAIN": "Player %s's %s is up! Somebody bash him/her/them!",
+      "PLAYER_STOP_GAIN": "Player %s's %s is down! Too bad for him/her/them!"
+    }
+  }
+}
