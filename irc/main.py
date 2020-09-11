@@ -22,18 +22,23 @@
 import logging
 import grpc
 from concurrent import futures
+import queue
+import asyncio
 
 from irc import IRC
 from agent import Agent
 from config import Config
 import irc_pb2_grpc, irc_pb2
+from cmd_rx import CmdRx
+from msg_tx import MsgTx
+
 class CmdInjector:
     def __init__(self, executor, irc):
         self.executor = executor
         self.irc = irc
     
     def Inject(self, request, context):
-        self.irc.InjectCommand(request.msg)
+        self.irc.InjectCommand(None, request.msg)
         return irc_pb2.InjectRep()
 
 # TODO: Enhance performance
@@ -45,12 +50,28 @@ def main():
     Config.Init()
 
     # Initialize agent
-    executor = futures.ThreadPoolExecutor(max_workers=32)
+    executor = futures.ThreadPoolExecutor(max_workers=1024)
+
     agent = Agent(executor)
 
     # Initialize IRC
     irc = IRC(nickname=Config.conf()['botNickName'])
-    irc.SetChannel(Config.conf()['channel'])
+
+    q = queue.Queue(maxsize=64)
+    def onCmdRx(n, m):
+        irc.InjectCommand(n, m)
+        msg = '%s: %s\n'%(n, m)
+        q.put(msg)
+    crx = CmdRx(executor, onCmdRx)
+    crx.Start()
+    mtx = MsgTx(executor, q)
+    mtx.Start()
+
+    def tmpA(msg):
+        q.put(msg)
+
+    irc.InitQueue(executor, tmpA)
+    #irc.SetChannel(Config.conf()['channel'])
     irc.ResetGame()
     irc.SetAgent(agent)
 
@@ -61,7 +82,20 @@ def main():
     server.add_insecure_port('[::]:29130')
     server.start()
 
-    irc.run(hostname=Config.conf()['ircServer'], port=Config.conf()['ircSSLPort'], tls=True, tls_verify=False)
+    loop = asyncio.get_event_loop()
+    irc.loop = loop
+    irc.channel = 'channel'
+    try:
+        loop.run_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        logging.info("Loop ending")
+        crx.Shutdown()
+        mtx.Shutdown()
+        loop.close()
+
+    # irc.run(hostname='127.0.0.1', port=Config.conf()['ircSSLPort'], tls=True, tls_verify=False)
 
 if __name__ == '__main__':
     main()

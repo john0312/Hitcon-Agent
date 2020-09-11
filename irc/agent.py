@@ -83,10 +83,9 @@ class Agent:
         else:
             print("Destroy game failed: %s"%(str(reply.error),))
     
-    async def QueryGame(self, gameName):
+    def QueryGame(self, gameName):
         req = kofserver_pb2.QueryGameReq(gameName=gameName)
-        loop = asyncio.get_event_loop()
-        reply = await loop.run_in_executor(self.executor, lambda: self.Stub().QueryGame(req))
+        reply = self.Stub().QueryGame(req)
         return reply
 
     def PlayerRegister(self, gameName, playerName):
@@ -108,14 +107,12 @@ class Agent:
         else:
             print("Player Issue Command failed: %s"%(str(reply.reply.error),))
     
-    async def PlayerIssueCmd(self, gameName, playerName, cmd):
+    def PlayerIssueCmd(self, gameName, playerName, cmd):
         req = kofserver_pb2.PlayerIssueCmdReq(gameName=gameName, playerName=playerName, cmd=cmd)
-        loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(self.executor, lambda: self.Stub().PlayerIssueCmd(req))
+        result = self.Stub().PlayerIssueCmd(req)
         return result
 
-    async def QueryScore(self, gameName, playerName):
+    def QueryScore(self, gameName, playerName):
         req = kofserver_pb2.QueryScoreReq(gameName=gameName, playerName=playerName)
-        loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(self.executor, lambda: self.Stub().QueryScore(req))
+        result = self.Stub().QueryScore(req)
         return result

@@ -25,6 +25,7 @@ import base64
 import pydle
 import asyncio
 import yaml
+import queue
 
 from config import Config
 from kofserver_pb2 import ErrorCode as KOFErrorCode
@@ -32,34 +33,83 @@ from kofserver_pb2 import GameEventType
 import kofserver_pb2
 
 class IRC(pydle.Client):
-    #def InitQueue(self):
-    #    self.rxQueue = queue.Queue(maxsize=64)
-    #    self.txQueue = queue.Queue(maxsize=64)
+    def InitQueue(self, executor, onBroadcast):
+        self.rxQueue = queue.Queue(maxsize=64)
+        self.txQueue = queue.Queue(maxsize=64)
+        self.executor = executor
+        self.onBroadcast = onBroadcast
     
+    def MessageAsync(self, target, reply):
+        logging.info("MessageAsync %s %s"%(target, reply))
+        try:
+            #self.txQueue.put((target, reply), False)
+            self.onBroadcast("### SYSTEM ###: %s\n"%(reply,))
+        except queue.Full:
+            logging.warn("txQueue Full! Dropping %s %s"%(target, reply))
+        #self.TryHandleTxQueue()
+    
+    def TryHandleTxQueue(self):
+        r = self._TryHandleTxQueueReal()
+        asyncio.run_coroutine_threadsafe(r, self.loop)
+    
+    async def _TryHandleTxQueueReal(self):
+        msgs = []
+        while True:
+            try:
+                itm = self.txQueue.get(False)
+                msgs.append(itm)
+            except queue.Empty:
+                break
+        r = [self._MyMessage(x[0], x[1]) for x in msgs]
+        await asyncio.wait(r)
+
+    async def _MyMessage(self, target, reply):
+        #return await self.message(target, reply)
+        return None
+
     async def on_connect(self):
         self.loop = asyncio.get_event_loop()
         await self.join(self.channel)
         logging.info("Bot Join %s" % (self.channel))
 
-    def InjectCommand(self, msg):
-        r = self._InjectCommandReal(msg)
-        asyncio.run_coroutine_threadsafe(r, self.loop)
-    
-    async def _InjectCommandReal(self, msg):
-        await self.message(self.channel, "Admin: %s"%msg)
-        await self.on_message(self.channel, Config.conf()["admin"][0], msg)
+    def InjectCommand(self, nick, msg):
+        if nick is None:
+            #await self.message(self.channel, "Admin: %s"%msg)
+            self.onBroadcast("Admin: %s\n"%msg)
+            nick = Config.conf()["admin"][0]
+        self._on_message_real(self.channel, nick, msg)
 
     async def on_message(self, target, nick, message):
+        return self._on_message_real(target, nick, message)
+    
+    def _on_message_real(self, target, nick, message):
+        try:
+            self.rxQueue.put((target, nick, message), False)
+        except queue.Full:
+            logging.warn("rxQueue Full! Dropping %s %s %s"%(target, nick, message))
+        self.TryHandleRxQueue()
+
+    def _TryHandleRxQueueReal(self):
+        while True:
+            try:
+                itm = self.rxQueue.get(False)
+                self.executor.submit(IRC.OnMessageSync, self, itm[0], itm[1], itm[2])
+            except queue.Empty:
+                break
+    
+    def TryHandleRxQueue(self):
+        self.executor.submit(IRC._TryHandleRxQueueReal, self)
+
+    def OnMessageSync(self, target, nick, message):
         if nick == self.nickname:
             # Never respond to self.
             return
         if target != self.channel:
             logging.warn("Discarding message from %s to %s: %s"%(nick, target, message))
-
         reply = None
         if self._IsAdmin(nick):
             if message.startswith("CreateGame ") == True:
-                reply = await self.CreateGame(message)
+                reply = self.CreateGame(message)
             elif message.startswith("StartGame ") == True:
                 self.StartGame(message)
             elif message.startswith("DestroyGame ") == True:
@@ -69,12 +119,12 @@ class IRC(pydle.Client):
             else:
                 pass
             if reply is not None:
-                await self.message(target, reply)
+                self.MessageAsync(target, reply)
         
         if message.startswith("Scoreboard") == True:
-            replies = await self.GetScoreBoard()
+            replies = self.GetScoreBoard()
             for r in replies:
-                await self.message(target, r)
+                self.MessageAsync(target, r)
             return
 
         # Admin can play too
@@ -82,18 +132,18 @@ class IRC(pydle.Client):
             return
         if nick not in self.userSet:
             registerMsg = self.PlayerRegister(self.gameName, nick)
-            await self.message(target, registerMsg)
+            self.MessageAsync(target, registerMsg)
             self.userSet.add(nick)
         if message.startswith("Cmd ") == True:
-            msg = await self.PlayerIssueCmd(self.gameName, nick, message)
+            msg = self.PlayerIssueCmd(self.gameName, nick, message)
             if msg is not None:
-                await self.message(target, msg)
+                self.MessageAsync(target, msg)
         #elif message.startswith("Shellcode ") == True:
         #    self.PlayerIssueSC(self.gameName, nick, message)
         elif message == "CurrentGame":
-            msg = await self.GetCurrentGame()
+            msg = self.GetCurrentGame()
             if msg is not None:
-                await self.message(target, msg)
+                self.MessageAsync(target, msg)
         else:
             pass
 
@@ -126,11 +176,11 @@ class IRC(pydle.Client):
         self.OnGameSet(self.gameName)
         return None
 
-    async def GetCurrentGame(self):
+    def GetCurrentGame(self):
         if self.gameName is None:
             return "No game is currently running"
 
-        result = await self.agent.QueryGame(self.gameName)
+        result = self.agent.QueryGame(self.gameName)
         if result.reply.error != KOFErrorCode.ERROR_NONE:
             logging.error("GetCurrentGame QueryGame result: %s"%(str(result.reply.error),))
             return "Internal error 1 querying current game"
@@ -141,7 +191,7 @@ class IRC(pydle.Client):
         msg = "Game State: %s\nDescription: %s\n"%(kofserver_pb2.GameState.Name(game.state), self.scenario['description'])
         return msg
         
-    async def CreateGame(self, message):
+    def CreateGame(self, message):
         message = message.split(" ")
         if len(message) != 3:
             errMsg = "CreateGame parameters format error!"
@@ -156,15 +206,15 @@ class IRC(pydle.Client):
             errMsg = "Game creation failed, error code %s"%(str(result),)
         else:
             errMsg = "Game created"
-        await self.OnGameSet(gameName)
+        self.OnGameSet(gameName)
         return errMsg
     
     # This is called when a game is started or it is known that we are on a game (through SetCurrentGame).
-    async def OnGameSet(self, gameName):
+    def OnGameSet(self, gameName):
         self.gameName = gameName
         
         # Get the game scenario
-        result = await self.agent.QueryGame(self.gameName)
+        result = self.agent.QueryGame(self.gameName)
         if result.reply.error != KOFErrorCode.ERROR_NONE:
             logging.error("SetCurrentGame QueryGame result: %s"%(str(result.reply.error),))
             return "Internal error 1 querying current game"
@@ -174,21 +224,13 @@ class IRC(pydle.Client):
         self.scenario = yaml.load(result.games[0].scenarioYML, Loader=yaml.SafeLoader)
 
         # Start the event listener
-        async def onGameEventReal(evt):
-            await self._OnEvent(gameName, evt)
         def onGameEvent(evt):
             # agent runs on executor, so we need to post it to the loop here.
-            asyncio.run_coroutine_threadsafe(onGameEventReal(evt), self.loop)
+            #self.executor.submit(IRC._OnEvent, self, gameName, evt)
+            self._OnEvent(self.gameName, evt)
         self.agent.ListenForGameEvent(self.gameName, onGameEvent)
-    
-    async def _OnEvent(self, gameName, evt):
-        try:
-            await self._OnEventReal(gameName, evt)
-        except:
-            # Display exception here instead of letting it go nowhere.
-            logging.exception("Exception in _OnEvent")
 
-    async def _OnEventReal(self, gameName, evt):
+    def _OnEvent(self, gameName, evt):
         print("Event: %s"%(str(evt),))
         if gameName != self.gameName:
             logging.warn("Discarding event %s not for current game %s/%s"%(str(evt), self.gameName, gameName))
@@ -200,28 +242,28 @@ class IRC(pydle.Client):
                 playerMsg = "by %s "%(evt.playerName,)
             msg = "PID %d (%s) %s%s"%(evt.info.pid, evt.info.cmdline, playerMsg, action)
             if evt.info.cmdline != "":
-                await self.message(self.channel, msg)
+                self.MessageAsync(self.channel, msg)
 
         if evt.eventType == GameEventType.PLAYER_START_GAIN:
             reason = IRC.Reason2Str(evt.gainReason)
             msg = "Player %s's %s is up! Somebody bash him/her/them!"%(evt.playerName, reason)
-            await self.message(self.channel, msg)
+            self.MessageAsync(self.channel, msg)
         if evt.eventType == GameEventType.PLAYER_STOP_GAIN:
             reason = IRC.Reason2Str(evt.gainReason)
             msg = "Player %s's %s is down! Too bad for him/her/them!"%(evt.playerName, reason)
-            await self.message(self.channel, msg)
+            self.MessageAsync(self.channel, msg)
         
         if evt.eventType == GameEventType.PROC_OUTPUT:
             msg = "PID %d: %s"%(evt.info.pid, IRC.SanitizeString(evt.procOutput.decode('utf8', 'backslashreplace')))
-            await self.message(self.channel, msg)
+            self.MessageAsync(self.channel, msg)
         
         if evt.eventType == GameEventType.GAME_STARTED:
             msg = "Game started!!!"
-            await self.message(self.channel, msg)
+            self.MessageAsync(self.channel, msg)
 
         if evt.eventType == GameEventType.GAME_REBOOT:
             msg = "Machine is rebooting!"
-            await self.message(self.channel, msg)
+            self.MessageAsync(self.channel, msg)
 
     # TODO: Move this somewhere else?
     @staticmethod
@@ -269,14 +311,14 @@ class IRC(pydle.Client):
         encodedMessage = base64.b64encode(message[1].encode())
         self.agent.PlayerIssueSC(gameName, nick, encodedMessage)
     
-    async def PlayerIssueCmd(self, gameName, nick, message):
+    def PlayerIssueCmd(self, gameName, nick, message):
         # Command could contain space.
         idx = message.find(" ")
         if idx == -1:
             errMsg = "Cmd parameters format error!"
             return errMsg
         cmd = message[idx+1:]
-        result = await self.agent.PlayerIssueCmd(gameName, nick, cmd)
+        result = self.agent.PlayerIssueCmd(gameName, nick, cmd)
         if result.reply.error == KOFErrorCode.ERROR_NONE:
             # No message for success, for now.
             errMsg = None
@@ -290,10 +332,10 @@ class IRC(pydle.Client):
             errMsg = "Run command failed, error code %s"%(KOFErrorCode.Name(result.reply.error),)
         return errMsg
 
-    async def GetScoreBoard(self):
+    def GetScoreBoard(self):
         if self.gameName is None:
             return "Game not running"
-        result = await self.agent.QueryScore(self.gameName, "")
+        result = self.agent.QueryScore(self.gameName, "")
         if result.reply.error != KOFErrorCode.ERROR_NONE:
             return ["Failed to query score, error code %s"%(str(result.reply.error),),]
         msg = []
