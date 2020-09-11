@@ -17,5 +17,7 @@ if [[ -b /dev/sdc ]]; then
     fi
 fi
 
+chown -R hitcon:hitcon /var/www/html/storage
+
 # Shameless path hardcoding.
 su - -c "cd /hitcon; python3 ./guest_agent_main.py &"
