@@ -43,16 +43,19 @@ class Agent:
         # The gRPC channel
         self.channel = channel
         # The kofserver gRPC stub
-        self.stub = kofserver_pb2_grpc.KOFServerStub(self.channel)
+        #self.stub = kofserver_pb2_grpc.KOFServerStub(self.channel)
 
         # Store executor for future use.
         self.executor = executor
     
+    def Stub(self):
+        return kofserver_pb2_grpc.KOFServerStub(self.channel)
+
     def ListenForGameEvent(self, gameName, callback):
         def ListenForGameEventInternal():
             try:
                 req = kofserver_pb2.GameEventListenerReq(gameName=gameName)
-                stream = self.stub.GameEventListener(req)
+                stream = self.Stub().GameEventListener(req)
                 for evt in stream:
                     callback(evt)
             except:
@@ -61,12 +64,12 @@ class Agent:
 
     def CreateGame(self, gameName, scenarioName):
         req = kofserver_pb2.CreateGameReq(gameName=gameName, scenarioName=scenarioName)
-        reply = self.stub.CreateGame(req)
+        reply = self.Stub().CreateGame(req)
         return reply.error
 
     def StartGame(self, gameName):
         req = kofserver_pb2.StartGameReq(gameName=gameName)
-        reply = self.stub.StartGame(req)
+        reply = self.Stub().StartGame(req)
         if reply.error == KOFErrorCode.ERROR_NONE:
             print("Start game successful")
         else:
@@ -74,29 +77,31 @@ class Agent:
 
     def DestroyGame(self, gameName):
         req = kofserver_pb2.DestroyGameReq(gameName=gameName)
-        reply = self.stub.DestroyGame(req)
+        reply = self.Stub().DestroyGame(req)
         if reply.error == KOFErrorCode.ERROR_NONE:
             print("Destroy game successful")
         else:
             print("Destroy game failed: %s"%(str(reply.error),))
     
-    def QueryGame(self, gameName):
+    async def QueryGame(self, gameName):
         req = kofserver_pb2.QueryGameReq(gameName=gameName)
-        reply = self.stub.QueryGame(req)
+        loop = asyncio.get_event_loop()
+        reply = await loop.run_in_executor(self.executor, lambda: self.Stub().QueryGame(req))
         return reply
+
     def PlayerRegister(self, gameName, playerName):
         req = kofserver_pb2.PlayerRegisterReq(gameName=gameName, playerName=playerName)
-        reply = self.stub.PlayerRegister(req)
+        reply = self.Stub().PlayerRegister(req)
         return reply.error
     
     def PlayerInfo(self, gameName, playerName):
         req = kofserver_pb2.PlayerInfoReq(gameName=gameName, playerName=playerName)
-        reply = self.stub.PlayerInfo(req)
+        reply = self.Stub().PlayerInfo(req)
         return reply
 
     def PlayerIssueSC(self, gameName, playerName, shellCode):
         req = kofserver_pb2.PlayerIssueSCReq(gameName=gameName, playerName=playerName, shellCode=shellCode)
-        reply = self.stub.PlayerIssueSC(req)
+        reply = self.Stub().PlayerIssueSC(req)
         if reply.reply.error == KOFErrorCode.ERROR_NONE:
             print("Player Issue Command successful, result: ")
             print(reply)
@@ -106,11 +111,11 @@ class Agent:
     async def PlayerIssueCmd(self, gameName, playerName, cmd):
         req = kofserver_pb2.PlayerIssueCmdReq(gameName=gameName, playerName=playerName, cmd=cmd)
         loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(self.executor, lambda: self.stub.PlayerIssueCmd(req))
+        result = await loop.run_in_executor(self.executor, lambda: self.Stub().PlayerIssueCmd(req))
         return result
 
     async def QueryScore(self, gameName, playerName):
         req = kofserver_pb2.QueryScoreReq(gameName=gameName, playerName=playerName)
         loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(self.executor, lambda: self.stub.QueryScore(req))
+        result = await loop.run_in_executor(self.executor, lambda: self.Stub().QueryScore(req))
         return result

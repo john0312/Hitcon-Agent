@@ -36,10 +36,8 @@ class GuestAgent:
         self.guestIP = guestIP
         # The gRPC channel
         self.channel = None
-        # The guest agent gRPC stub
-        self.stub = None
         # Lock required to write self.stub. Reading doesn't require the lock.
-        self.stubLock = threading.Lock()
+        self.channelLock = threading.Lock()
         # The event thread for listening for event.
         self.eventThread = None
         
@@ -62,21 +60,21 @@ class GuestAgent:
 
     def _EventThreadMainReal(self):
         while True:
-            if self.stub is None:
+            if self.channel is None:
                 return
             self._DoListenForEvent()
-            if self.stub is None:
+            if self.channel is None:
                 return
             logging.warn('DoListenForEvent exited, maybe connection is dead?')
             self.executor.submit(GuestAgent.CheckAlive, self) # Check to see if we are OK.
             time.sleep(1.0)
     
     def _DoListenForEvent(self):
-        if self.stub is None:
-            logging.warn('No stub when trying to DoListenForEvent')
+        if self.channel is None:
+            logging.warn('No channel when trying to DoListenForEvent')
             return
         
-        stream = self.stub.EventListener(guest_agent_pb2.EventListenerReq())
+        stream = self.Stub().EventListener(guest_agent_pb2.EventListenerReq())
         try:
             for evt in stream:
                 with self.eventCallbackSetLock:
@@ -86,10 +84,14 @@ class GuestAgent:
             logging.exception("GuestAgent EventListener interrupted.")
         return
 
+    def Stub(self):
+        assert self.channel is not None
+        return guest_agent_pb2_grpc.GuestAgentStub(self.channel)
+
     # Try to connect to the agent, return True if it's reachable.
     def EnsureConnection(self):
-        with self.stubLock:
-            if self.channel is not None or self.stub is not None:
+        with self.channelLock:
+            if self.channel is not None:
                 # Already connected.
                 logging.warn('EnsureConnection() when it is already connected')
                 return True
@@ -106,7 +108,10 @@ class GuestAgent:
                 return False
 
             self.channel = channel
-            self.stub = guest_agent_pb2_grpc.GuestAgentStub(channel)
+            #t1 = time.time()
+            #self.stub = guest_agent_pb2_grpc.GuestAgentStub(channel)
+            #t2 = time.time()
+            #print("Stub creation: %g"%(t2-t1,))
 
             # We've the stub, now start the event thread.
             self.eventThread = self.executor.submit(GuestAgent._EventThreadMain, self)
@@ -120,17 +125,17 @@ class GuestAgent:
         return result
 
     def IsAlive(self):
-        return self.stub is not None
+        return self.channel is not None
 
     # CheckAlive checks if the guest agent is responsive.
     def CheckAlive(self):
-        if self.stub is None or self.channel is None:
+        if self.channel is None:
             # Not connected.
             logging.warn('CheckAlive() but it is not connected')
             return False
         
         try:
-            reply = self.stub.Ping(guest_agent_pb2.PingReq())
+            reply = self.Stub().Ping(guest_agent_pb2.PingReq())
         except:
             self.ResetConnection()
             logging.exception("Failed to check guest agent, it's probably dead.")
@@ -149,10 +154,9 @@ class GuestAgent:
     # Close the connection. Usually called when we are shutting down.
     # Do not call from event thread, it'll deadlock.
     def ResetConnection(self):
-        with self.stubLock:
+        with self.channelLock:
             if self.channel is not None:
                 self.channel.close()
-            self.stub = None
             self.channel = None
             if self.eventThread is not None:
                 logging.info("Waiting for event thread to exit")
@@ -170,12 +174,12 @@ class GuestAgent:
         genericRep = guest_agent_pb2.Rep(error=errorCode)
         failureReply = guest_agent_pb2.QueryProcInfoRep(reply=genericRep)
 
-        if self.stub is None:
+        if self.channel is None:
             logging.warn("QueryProcInfo() called when connection is not ready.")
             return failureReply
 
         try:
-            result = self.stub.QueryProcInfo(guest_agent_pb2.QueryProcInfoReq())
+            result = self.Stub().QueryProcInfo(guest_agent_pb2.QueryProcInfoReq())
         except Exception:
             logging.exception("Failed to QueryProcInfo(), resetting channel.")
             self.ResetConnection()
@@ -189,12 +193,12 @@ class GuestAgent:
         genericRep = guest_agent_pb2.Rep(error=errorCode)
         failureReply = guest_agent_pb2.RunCmdRep(reply=genericRep)
 
-        if self.stub is None:
+        if self.channel is None:
             logging.warn("RunCmd() called when connection is not ready.")
             return failureReply
 
         try:
-            result = self.stub.RunCmd(guest_agent_pb2.RunCmdReq(cmd=cmd))
+            result = self.Stub().RunCmd(guest_agent_pb2.RunCmdReq(cmd=cmd))
         except Exception:
             logging.exception("Failed to RunCmd(), resetting channel.")
             self.ResetConnection()

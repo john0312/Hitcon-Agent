@@ -32,6 +32,10 @@ from kofserver_pb2 import GameEventType
 import kofserver_pb2
 
 class IRC(pydle.Client):
+    #def InitQueue(self):
+    #    self.rxQueue = queue.Queue(maxsize=64)
+    #    self.txQueue = queue.Queue(maxsize=64)
+    
     async def on_connect(self):
         self.loop = asyncio.get_event_loop()
         await self.join(self.channel)
@@ -55,7 +59,7 @@ class IRC(pydle.Client):
         reply = None
         if self._IsAdmin(nick):
             if message.startswith("CreateGame ") == True:
-                reply = self.CreateGame(message)
+                reply = await self.CreateGame(message)
             elif message.startswith("StartGame ") == True:
                 self.StartGame(message)
             elif message.startswith("DestroyGame ") == True:
@@ -87,7 +91,7 @@ class IRC(pydle.Client):
         #elif message.startswith("Shellcode ") == True:
         #    self.PlayerIssueSC(self.gameName, nick, message)
         elif message == "CurrentGame":
-            msg = self.GetCurrentGame()
+            msg = await self.GetCurrentGame()
             if msg is not None:
                 await self.message(target, msg)
         else:
@@ -122,11 +126,11 @@ class IRC(pydle.Client):
         self.OnGameSet(self.gameName)
         return None
 
-    def GetCurrentGame(self):
+    async def GetCurrentGame(self):
         if self.gameName is None:
             return "No game is currently running"
 
-        result = self.agent.QueryGame(self.gameName)
+        result = await self.agent.QueryGame(self.gameName)
         if result.reply.error != KOFErrorCode.ERROR_NONE:
             logging.error("GetCurrentGame QueryGame result: %s"%(str(result.reply.error),))
             return "Internal error 1 querying current game"
@@ -137,7 +141,7 @@ class IRC(pydle.Client):
         msg = "Game State: %s\nDescription: %s\n"%(kofserver_pb2.GameState.Name(game.state), self.scenario['description'])
         return msg
         
-    def CreateGame(self, message):
+    async def CreateGame(self, message):
         message = message.split(" ")
         if len(message) != 3:
             errMsg = "CreateGame parameters format error!"
@@ -152,15 +156,15 @@ class IRC(pydle.Client):
             errMsg = "Game creation failed, error code %s"%(str(result),)
         else:
             errMsg = "Game created"
-        self.OnGameSet(gameName)
+        await self.OnGameSet(gameName)
         return errMsg
     
     # This is called when a game is started or it is known that we are on a game (through SetCurrentGame).
-    def OnGameSet(self, gameName):
+    async def OnGameSet(self, gameName):
         self.gameName = gameName
         
         # Get the game scenario
-        result = self.agent.QueryGame(self.gameName)
+        result = await self.agent.QueryGame(self.gameName)
         if result.reply.error != KOFErrorCode.ERROR_NONE:
             logging.error("SetCurrentGame QueryGame result: %s"%(str(result.reply.error),))
             return "Internal error 1 querying current game"

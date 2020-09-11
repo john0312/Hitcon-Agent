@@ -33,7 +33,7 @@ from config import Config
 
 def main():
     # Setup logging and config
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
     Config.Init()
 
     # Create the executor that we'll run the server from.
