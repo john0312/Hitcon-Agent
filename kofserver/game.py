@@ -198,7 +198,8 @@ class Game:
         assert playerName in self.users
         if 'pid' in self.users[playerName]:
             prevPID = self.users[playerName]
-            del self.pidToUser[pid]
+            if prevPID in self.pidToUser:
+                del self.pidToUser[prevPID]
         self.users[playerName]['pid'] = pid
         self.pidToUser[pid] = playerName
 
