@@ -65,6 +65,7 @@ class MsgTx:
             
             while True:
                 conn, addr = s.accept()
+                logging.info("MsgTx accepted a connection")
                 with self.sockListLock:
                     self.sockList.append(conn)
     
@@ -80,6 +81,7 @@ class MsgTx:
             #logging.info("SenderTask: %s"%(msg,))
             with self.sockListLock:
                 nextSockList = []
+                logging.info("Sending to %d clients: %s"%(len(self.sockList), msg))
                 for s in self.sockList:
                     try:
                         s.sendall(msg.encode('utf8'))
