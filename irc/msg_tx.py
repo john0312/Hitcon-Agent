@@ -65,6 +65,7 @@ class MsgTx:
             
             while True:
                 conn, addr = s.accept()
+                conn.setblocking(0)
                 logging.info("MsgTx accepted a connection")
                 with self.sockListLock:
                     self.sockList.append(conn)
